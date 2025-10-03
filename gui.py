@@ -129,7 +129,7 @@ async def main(page: ft.Page):
                 tags_row.controls.append(ft.Chip(ft.Text(tag, size=10), bgcolor=ft.colors.BLUE_100, padding=4))
             account_list_view.controls.append(ft.Container(
                 content=ft.Row(vertical_alignment=ft.CrossAxisAlignment.CENTER, controls=[
-                    ft.Icon(ft.icons.PERSON_OUTLINE, size=24),
+                    ft.Icon("person_outline", size=24),
                     ft.VerticalDivider(),
                     ft.Column([
                         ft.Text(acc.get("phone", acc["session_name"]), weight=ft.FontWeight.BOLD),
@@ -138,7 +138,7 @@ async def main(page: ft.Page):
                     ], spacing=2, expand=True),
                     ft.Row([
                         ft.ElevatedButton("Login", on_click=login_button_clicked, data=acc),
-                        ft.IconButton(icon=ft.icons.EDIT_NOTE, on_click=edit_account_clicked, data=acc, tooltip="Edit notes and tags")
+                        ft.IconButton(icon="edit_note", on_click=edit_account_clicked, data=acc, tooltip="Edit notes and tags")
                     ], spacing=5)
                 ]),
                 padding=10, border=ft.border.only(bottom=ft.BorderSide(1, ft.colors.BLACK12))
@@ -148,8 +148,8 @@ async def main(page: ft.Page):
             ft.Row([
                 ft.Text("Accounts", size=24, weight=ft.FontWeight.BOLD),
                 ft.Row([
-                    ft.ElevatedButton("Import Sessions", icon=ft.icons.DOWNLOAD, on_click=import_sessions_clicked),
-                    ft.ElevatedButton("Add Account", icon=ft.icons.ADD, on_click=add_account_clicked)
+                    ft.ElevatedButton("Import Sessions", icon="download", on_click=import_sessions_clicked),
+                    ft.ElevatedButton("Add Account", icon="add", on_click=add_account_clicked)
                 ])
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
             ft.Divider(height=2),
@@ -224,7 +224,7 @@ async def main(page: ft.Page):
         content_area.content = ft.Column([
             ft.Row([
                 ft.Text("Your Chats", size=24, weight=ft.FontWeight.BOLD),
-                ft.ElevatedButton("Logout", icon=ft.icons.LOGOUT, on_click=disconnect_and_go_back, bgcolor=ft.colors.RED_200)
+                ft.ElevatedButton("Logout", icon="logout", on_click=disconnect_and_go_back, bgcolor=ft.colors.RED_200)
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             status_text,
             dialogs_list_view
@@ -271,7 +271,7 @@ async def main(page: ft.Page):
         content_area.content = ft.Column([
             ft.ElevatedButton("Back to Chats", on_click=go_back),
             messages_list_view,
-            ft.Row([message_input, ft.IconButton(icon=ft.icons.SEND, on_click=send_message_click)])
+            ft.Row([message_input, ft.IconButton(icon="send", on_click=send_message_click)])
         ], expand=True)
         await page.update_async()
         
@@ -347,7 +347,7 @@ async def main(page: ft.Page):
             message_box,
             ft.Text("4. Set delay between messages:"),
             delay_slider,
-            ft.ElevatedButton("Start Sending", icon=ft.icons.ROCKET_LAUNCH, on_click=start_sending_click),
+            ft.ElevatedButton("Start Sending", icon="rocket_launch", on_click=start_sending_click),
             ft.Divider(),
             ft.Text("Status Log:"),
             ft.Container(content=status_log, expand=True, border=ft.border.all(1, ft.colors.BLACK26), padding=10, border_radius=5)
@@ -367,8 +367,8 @@ async def main(page: ft.Page):
         min_extended_width=200,
         group_alignment=-0.9,
         destinations=[
-            ft.NavigationRailDestination(icon=ft.icons.PERSON_OUTLINE, selected_icon=ft.icons.PERSON, label="Accounts"),
-            ft.NavigationRailDestination(icon=ft.icons.CAMPAIGN_OUTLINE, selected_icon=ft.icons.CAMPAIGN, label="Ad Cabinet"),
+            ft.NavigationRailDestination(icon="person_outline", selected_icon="person", label="Accounts"),
+            ft.NavigationRailDestination(icon="campaign_outline", selected_icon="campaign", label="Ad Cabinet"),
         ],
         on_change=nav_rail_changed,
     )
