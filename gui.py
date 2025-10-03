@@ -50,7 +50,7 @@ async def main(page: ft.Page):
                 message_input.value = "" # Clear input field
                 page.update()
 
-        send_button = ft.IconButton(icon=ft.icons.SEND_ROUNDED, on_click=send_message_click)
+        send_button = ft.IconButton(icon="send_rounded", on_click=send_message_click)
 
         page.add(
             ft.Row([back_button], alignment=ft.MainAxisAlignment.START),
