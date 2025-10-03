@@ -14,6 +14,42 @@ async def main(page: ft.Page):
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
 
     client_holder = {"client": None}
+    # To hold the reference to the global dialog update handler
+    handler_holder = {"dialog_handler": None}
+
+    # --- View: Initial Welcome/Session Selector ---
+    def show_welcome_view():
+        page.clean()
+        page.title = "Welcome"
+
+        session_files = [f for f in os.listdir('.') if f.endswith('.session')]
+        session_options = [ft.dropdown.Option(s) for s in session_files]
+        session_dropdown = ft.Dropdown(label="Select existing session", options=session_options, width=300)
+
+        async def login_with_session(e):
+            session_name = session_dropdown.value
+            if not session_name: return
+
+            client = TelegramClient(session_name, api_id, api_hash)
+            client_holder["client"] = client
+            await client.connect()
+            
+            if await client.is_user_authorized():
+                await show_dialogs(client)
+            else:
+                show_login_form(session_name.replace('.session',''))
+
+        def register_new(e):
+            show_login_form()
+        
+        page.add(ft.Column([
+            ft.Text("Welcome to Telegram Client", size=24), 
+            session_dropdown,
+            ft.ElevatedButton("Login with Session", on_click=login_with_session, width=300),
+            ft.Text("Or"),
+            ft.ElevatedButton("Register a New Account", on_click=register_new, width=300)
+        ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15))
+        page.update()
 
     # --- View: Chat Messages (with Auto-Update and Send) ---
     async def show_chat_messages(client: TelegramClient, chat_id: int, chat_name: str):
@@ -21,112 +57,132 @@ async def main(page: ft.Page):
         page.title = f"Chat: {chat_name}"
 
         messages_list_view = ft.ListView(expand=True, spacing=10, auto_scroll=True)
+        chat_message_handler = None
 
-        # Handler for new messages (both incoming and outgoing)
         async def on_new_message(event):
-            # Ignore messages without text
             if not event.text:
                 return
+            
             sender = await event.get_sender()
-            sender_name = sender.first_name if hasattr(sender, 'first_name') else "You" # Simplified sender logic
+            sender_name = "You" if event.out else (sender.first_name if hasattr(sender, 'first_name') else "Unknown")
+
             messages_list_view.controls.append(ft.Text(f"{sender_name}: {event.text}"))
             page.update()
 
-        client.add_event_handler(on_new_message, events.NewMessage(chats=chat_id))
+        chat_message_handler = on_new_message
+        client.add_event_handler(chat_message_handler, events.NewMessage(chats=chat_id))
 
         async def go_back(e):
-            client.remove_event_handler(on_new_message) # Crucial: remove handler
+            client.remove_event_handler(chat_message_handler)
             await show_dialogs(client)
 
         back_button = ft.ElevatedButton("Back to Chats", on_click=go_back)
-        
-        # --- Message Input and Send Button ---
         message_input = ft.TextField(hint_text="Type a message...", expand=True)
 
         async def send_message_click(e):
-            message_text = message_input.value
-            if message_text:
-                await client.send_message(chat_id, message_text)
-                message_input.value = "" # Clear input field
+            if message_input.value:
+                await client.send_message(chat_id, message_input.value)
+                message_input.value = ""
                 page.update()
 
         send_button = ft.IconButton(icon="send_rounded", on_click=send_message_click)
 
         page.add(
-            ft.Row([back_button], alignment=ft.MainAxisAlignment.START),
+            ft.Row([back_button]),
             ft.Text(f"Messages for {chat_name}", size=20, weight=ft.FontWeight.BOLD),
             messages_list_view,
             ft.Row([message_input, send_button])
         )
         page.update()
 
-        # Load initial messages
         try:
             messages = []
             async for message in client.iter_messages(chat_id, limit=50):
-                # Only display messages with text
                 if message and message.text:
                     sender = await message.get_sender()
                     sender_name = "You" if message.out else (sender.first_name if hasattr(sender, 'first_name') else "Unknown")
                     messages.append(ft.Text(f"{sender_name}: {message.text}"))
-            
             messages.reverse()
             messages_list_view.controls.extend(messages)
         except Exception as e:
             messages_list_view.controls.append(ft.Text(f"Error loading messages: {e}"))
-
         page.update()
 
-    # --- View: Dialogs/Chats List (with Unread Counts and Last Message) ---
+    # --- View: Dialogs/Chats List (DYNAMIC + LOGOUT) ---
     async def show_dialogs(client: TelegramClient):
         page.clean()
         page.title = "My Chats"
         
-        status_text = ft.Text("Loading chats...")
         dialogs_list_view = ft.ListView(expand=1, spacing=10)
-        
+        status_text = ft.Text("Loading chats...")
+
+        async def logout_and_cleanup(e):
+            # Remove event handlers to prevent errors after disconnect
+            if handler_holder.get("dialog_handler"):
+                client.remove_event_handler(handler_holder["dialog_handler"])
+                handler_holder["dialog_handler"] = None
+
+            session_filename = client.session.filename
+            await client.log_out()
+            client_holder["client"] = None
+
+            if os.path.exists(session_filename):
+                os.remove(session_filename)
+            
+            show_welcome_view()
+
+        async def load_and_display_dialogs():
+            dialogs_list_view.controls.clear()
+            status_text.visible = True
+            page.update()
+            try:
+                async for dialog in client.iter_dialogs():
+                    subtitle_text = "[Media or service message]"
+                    if dialog.message and dialog.message.text:
+                        subtitle_text = f"You: {dialog.message.text}" if dialog.message.out else dialog.message.text
+
+                    trailing_widget = None
+                    if dialog.unread_count > 0:
+                        trailing_widget = ft.CircleAvatar(content=ft.Text(str(dialog.unread_count), color="white"), bgcolor="blue400", radius=14)
+
+                    dialogs_list_view.controls.append(
+                        ft.ListTile(
+                            title=ft.Text(dialog.name, weight=ft.FontWeight.BOLD),
+                            subtitle=ft.Text(subtitle_text, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, size=14),
+                            trailing=trailing_widget, data=dialog.id, on_click=on_chat_click
+                        )
+                    )
+                status_text.visible = False
+            except Exception as e:
+                status_text.value = f"Error loading chats: {e}"
+            page.update()
+
+        async def on_dialog_update(event):
+            await load_and_display_dialogs()
+
+        handler_holder["dialog_handler"] = on_dialog_update
+
         async def on_chat_click(e):
+            if handler_holder["dialog_handler"]:
+                client.remove_event_handler(handler_holder["dialog_handler"])
             await show_chat_messages(client, e.control.data, e.control.title.value)
 
         page.add(
-            ft.Row([ft.Text("Your Chats", size=24, weight=ft.FontWeight.BOLD)], alignment=ft.MainAxisAlignment.CENTER),
+            ft.Row(
+                [
+                    ft.Text("Your Chats", size=24, weight=ft.FontWeight.BOLD),
+                    ft.ElevatedButton("Logout", on_click=logout_and_cleanup, bgcolor="red_200"),
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+            ),
             status_text,
             dialogs_list_view
         )
-        page.update()
+        
+        client.add_event_handler(on_dialog_update, events.NewMessage)
+        client.add_event_handler(on_dialog_update, events.MessageRead)
 
-        try:
-            async for dialog in client.iter_dialogs():
-                subtitle_text = ""
-                if dialog.message and dialog.message.text:
-                    if dialog.message.out:
-                        subtitle_text = f"You: {dialog.message.text}"
-                    else:
-                        subtitle_text = dialog.message.text
-                else:
-                    subtitle_text = "[Media or service message]"
-
-                trailing_widget = None
-                if dialog.unread_count > 0:
-                    trailing_widget = ft.CircleAvatar(
-                        content=ft.Text(str(dialog.unread_count), color="white"),
-                        bgcolor=ft.colors.BLUE_400,
-                        radius=14
-                    )
-
-                dialogs_list_view.controls.append(
-                    ft.ListTile(
-                        title=ft.Text(dialog.name, weight=ft.FontWeight.BOLD),
-                        subtitle=ft.Text(subtitle_text, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, size=14),
-                        trailing=trailing_widget,
-                        data=dialog.id,
-                        on_click=on_chat_click
-                    )
-                )
-            status_text.visible = False
-        except Exception as e:
-            status_text.value = f"Error loading chats: {e}"
-        page.update()
+        await load_and_display_dialogs()
 
     # --- View: Login/Registration Form ---
     def show_login_form(session_name=None):
@@ -185,40 +241,6 @@ async def main(page: ft.Page):
             ft.Text("Account Registration", size=24), session_name_field, phone_number_field,
             code_field, password_field, action_button, status_text
         ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20))
-        page.update()
-
-    # --- View: Initial Welcome/Session Selector ---
-    def show_welcome_view():
-        page.clean()
-        page.title = "Welcome"
-
-        session_files = [f for f in os.listdir('.') if f.endswith('.session')]
-        session_options = [ft.dropdown.Option(s) for s in session_files]
-        session_dropdown = ft.Dropdown(label="Select existing session", options=session_options, width=300)
-
-        async def login_with_session(e):
-            session_name = session_dropdown.value
-            if not session_name: return
-
-            client = TelegramClient(session_name, api_id, api_hash)
-            client_holder["client"] = client
-            await client.connect()
-            
-            if await client.is_user_authorized():
-                await show_dialogs(client)
-            else:
-                show_login_form(session_name.replace('.session',''))
-
-        def register_new(e):
-            show_login_form()
-        
-        page.add(ft.Column([
-            ft.Text("Welcome to Telegram Client", size=24), 
-            session_dropdown,
-            ft.ElevatedButton("Login with Session", on_click=login_with_session, width=300),
-            ft.Text("Or"),
-            ft.ElevatedButton("Register a New Account", on_click=register_new, width=300)
-        ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15))
         page.update()
 
     # --- Initial App Load ---
