@@ -47,17 +47,17 @@ async def main(page: ft.Page):
             client = TelegramClient(session_name, api_id, api_hash)
             client_holder["client"] = client
             status_text.value = f"Connecting with {account.get('phone', session_name)}..."
-            await page.update()
+            page.update()
             try:
                 await client.connect()
                 if not await client.is_user_authorized():
                     status_text.value = f"Session for {session_name} is invalid."
-                    await page.update()
+                    page.update()
                     return
                 await show_dialogs_view(content_area, client)
             except Exception as e:
                 status_text.value = f"Failed to connect: {e}"
-                await page.update()
+                page.update()
 
         async def login_button_clicked(e):
             await login_and_show_dialogs(e.control.data)
@@ -76,7 +76,7 @@ async def main(page: ft.Page):
                         break
                 save_accounts(all_accounts)
                 page.dialog.open = False
-                await page.update()
+                page.update()
                 await show_account_manager_view()
 
             def close_dialog(e):
@@ -113,7 +113,7 @@ async def main(page: ft.Page):
                 await show_account_manager_view()
             else:
                 status_text.value = "No new session files found to import."
-                await page.update()
+                page.update()
 
         accounts = load_accounts()
         account_list_view = ft.ListView(expand=True, spacing=1, padding=0)
@@ -150,7 +150,7 @@ async def main(page: ft.Page):
             account_list_view,
             status_text
         ], expand=True)
-        await page.update()
+        page.update()
 
     async def show_login_form(content_area):
         phone_field = ft.TextField(label="Phone Number (+1234567890)", width=300)
@@ -188,7 +188,7 @@ async def main(page: ft.Page):
                 status.value = "2FA Password needed."
             except Exception as ex:
                 status.value = f"Error: {ex}"
-            await page.update()
+            page.update()
 
         signin_button = ft.ElevatedButton("Get Code", width=300, on_click=get_code_or_signin)
 
@@ -197,7 +197,7 @@ async def main(page: ft.Page):
             ft.Text("Add New Account", size=24),
             phone_field, code_field, pw_field, signin_button, status
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20)
-        await page.update()
+        page.update()
 
     async def show_dialogs_view(content_area, client):
         dialogs_list_view = ft.ListView(expand=True, spacing=10)
@@ -219,7 +219,7 @@ async def main(page: ft.Page):
             status_text,
             dialogs_list_view
         ], expand=True)
-        await page.update()
+        page.update()
 
         try:
             async for dialog in client.iter_dialogs():
@@ -238,7 +238,7 @@ async def main(page: ft.Page):
             status_text.visible = False
         except Exception as e:
             status_text.value = f"Error loading chats: {e}"
-        await page.update()
+        page.update()
 
     async def show_chat_messages_view(content_area, client, chat_id, chat_name):
         messages_list_view = ft.ListView(expand=True, spacing=10, auto_scroll=True)
@@ -254,19 +254,19 @@ async def main(page: ft.Page):
                 await client.send_message(chat_id, message_input.value)
                 messages_list_view.controls.append(ft.Text(f"You: {message_input.value}", text_align=ft.TextAlign.RIGHT))
                 message_input.value = ""
-                await page.update()
+                page.update()
 
         content_area.content = ft.Column([
             ft.ElevatedButton("Back to Chats", on_click=go_back),
             messages_list_view,
             ft.Row([message_input, ft.IconButton(icon="send", on_click=send_message_click)])
         ], expand=True)
-        await page.update()
+        page.update()
 
         async for message in client.iter_messages(chat_id, limit=50):
             sender_name = "You" if message.out else (message.sender.first_name if message.sender else "Unknown")
             messages_list_view.controls.insert(0, ft.Text(f"{sender_name}: {message.text}"))
-        await page.update()
+        page.update()
 
     async def show_ad_cabinet_view(content_area):
         accounts = load_accounts()
@@ -284,15 +284,15 @@ async def main(page: ft.Page):
 
             if not all([senders, targets, message]):
                 status_log.controls.append(ft.Text("Error: Senders, targets, and message are required.", color=ft.colors.RED))
-                await page.update()
+                page.update()
                 return
 
             e.control.disabled = True
-            await page.update()
+            page.update()
 
             for sender_acc in senders:
                 status_log.controls.append(ft.Text(f"--- Logging in with {sender_acc.get('phone')} ---", weight=ft.FontWeight.BOLD))
-                await page.update()
+                page.update()
                 client = TelegramClient(sender_acc['session_name'], api_id, api_hash)
                 try:
                     await client.connect()
@@ -303,26 +303,26 @@ async def main(page: ft.Page):
                     for target in targets:
                         try:
                             status_log.controls.append(ft.Text(f"    -> Sending to {target}..."))
-                            await page.update()
+                            page.update()
                             await client.send_message(target, message)
                             status_log.controls.append(ft.Text(f"    -> Success! Waiting for {delay}s.", color=ft.colors.GREEN))
-                            await page.update()
+                            page.update()
                             await asyncio.sleep(delay)
                         except FloodWaitError as fwe:
                             status_log.controls.append(ft.Text(f"    -> Flood wait! Sleeping for {fwe.seconds}s.", color=ft.colors.ORANGE))
-                            await page.update()
+                            page.update()
                             await asyncio.sleep(fwe.seconds)
                         except Exception as ex:
                             status_log.controls.append(ft.Text(f"    -> Failed to send to {target}: {ex}", color=ft.colors.RED))
-                            await page.update()
+                            page.update()
                 finally:
                     if client.is_connected(): await client.disconnect()
                     status_log.controls.append(ft.Text(f"--- Session {sender_acc.get('phone')} finished ---\n"))
-                    await page.update()
+                    page.update()
 
             status_log.controls.append(ft.Text("====== All tasks finished ======", weight=ft.FontWeight.BOLD))
             e.control.disabled = False
-            await page.update()
+            page.update()
 
         content_area.content = ft.Column([
             ft.Text("Ad Cabinet", size=24, weight=ft.FontWeight.BOLD),
@@ -339,7 +339,7 @@ async def main(page: ft.Page):
             ft.Text("Status Log:"),
             ft.Container(content=status_log, expand=True, border=ft.border.all(1, ft.colors.BLACK26), padding=10, border_radius=5)
         ], expand=True, scroll=ft.ScrollMode.ADAPTIVE)
-        await page.update()
+        page.update()
 
     async def nav_rail_changed(e):
         idx = e.control.selected_index
