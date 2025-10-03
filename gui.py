@@ -16,6 +16,8 @@ ACCOUNTS_FILE = "accounts.json"
 # --- Data Persistence --- #
 def load_accounts():
     if not os.path.exists(ACCOUNTS_FILE):
+        with open(ACCOUNTS_FILE, 'w') as f:
+            json.dump([], f)
         return []
     with open(ACCOUNTS_FILE, 'r') as f:
         try:
@@ -35,7 +37,7 @@ async def main(page: ft.Page):
     if not os.path.exists("downloads/avatars"):
         os.makedirs("downloads/avatars")
 
-    client_holder = {"client": None}
+    client_holder = {"client": None, "handlers": {}}
 
     # --- Views --- #
     async def show_account_manager():
@@ -69,7 +71,7 @@ async def main(page: ft.Page):
             login_button = ft.ElevatedButton("Login", on_click=login_button_clicked, data=acc)
             account_list_view.controls.append(
                 ft.ListTile(
-                    leading=ft.Icon("person"),  # Using string name for compatibility
+                    leading=ft.Icon("person"),
                     title=ft.Text(acc.get("phone", acc["session_name"])),
                     subtitle=ft.Text(f"Status: {acc.get('status', 'unknown')}"),
                     trailing=login_button
@@ -117,6 +119,12 @@ async def main(page: ft.Page):
                         page.update()
                         return
                     
+                    accounts = load_accounts()
+                    if any(a['session_name'] == session_name for a in accounts):
+                        status_text.value = "Account already exists. Login from the manager."
+                        page.update()
+                        return
+
                     client = TelegramClient(session_name, api_id, api_hash)
                     client_holder["client"] = client
                     await client.connect()
@@ -181,6 +189,9 @@ async def main(page: ft.Page):
             await show_account_manager()
 
         async def update_avatar(dialog, list_tile):
+            # Safety check to prevent errors after disconnect
+            if not client_holder["client"] or not client_holder["client"].is_connected():
+                return
             relative_path = await client.download_profile_photo(dialog.entity, file=f"downloads/avatars/{dialog.id}.jpg")
             if relative_path:
                 list_tile.leading.background_image_src = os.path.abspath(relative_path)
@@ -211,6 +222,7 @@ async def main(page: ft.Page):
                         data=dialog.id, on_click=on_chat_click)
                     
                     new_controls.append(list_tile)
+                    # Fire and forget the avatar download
                     asyncio.create_task(update_avatar(dialog, list_tile))
 
                 dialogs_list_view.controls = new_controls
@@ -232,10 +244,10 @@ async def main(page: ft.Page):
         page.clean()
         page.title = f"Chat: {chat_name}"
         messages_list_view = ft.ListView(expand=True, spacing=10, auto_scroll=True)
-        typing_indicator = ft.Text("", italic=True, size=12)
         
-        message_handler = None
-        typing_handler = None
+        # Clean up old handlers
+        if client_holder["handlers"].get("message"):
+            client.remove_event_handler(client_holder["handlers"]["message"])
 
         async def on_new_message(event):
             sender = await event.get_sender()
@@ -243,18 +255,12 @@ async def main(page: ft.Page):
             messages_list_view.controls.append(ft.Text(f"{sender_name}: {event.text}"))
             page.update()
 
-        async def on_typing(event):
-            user = await event.get_user()
-            name = user.first_name if user and user.first_name else "Someone"
-            typing_indicator.value = f"{name} is typing..."
-            page.update()
-            await asyncio.sleep(2) # Show indicator for a bit
-            typing_indicator.value = ""
-            page.update()
+        client_holder["handlers"]["message"] = client.add_event_handler(on_new_message, events.NewMessage(chats=chat_id, incoming=True))
 
         async def go_back(e):
-            if message_handler: client.remove_event_handler(message_handler)
-            if typing_handler: client.remove_event_handler(typing_handler)
+            if client_holder["handlers"].get("message"): 
+                client.remove_event_handler(client_holder["handlers"]["message"])
+                client_holder["handlers"]["message"] = None
             await show_dialogs(client)
 
         back_button = ft.ElevatedButton("Back to Chats", on_click=go_back)
@@ -262,27 +268,37 @@ async def main(page: ft.Page):
 
         async def send_message_click(e):
             if message_input.value:
-                await client.send_message(chat_id, message_input.value)
-                messages_list_view.controls.append(ft.Text(f"You: {message_input.value}"))
+                text = message_input.value
+                await client.send_message(chat_id, text)
+                messages_list_view.controls.append(ft.Text(f"You: {text}"))
                 message_input.value = ""
                 messages_list_view.scroll_to(offset=-1, duration=300)
                 page.update()
 
         send_button = ft.IconButton(icon="send_rounded", on_click=send_message_click)
-        page.add(ft.Row([back_button]), messages_list_view, typing_indicator, ft.Row([message_input, send_button]))
+        page.add(ft.Row([back_button]), messages_list_view, ft.Row([message_input, send_button]))
         
-        # Add handlers
-        message_handler = client.add_event_handler(on_new_message, events.NewMessage(chats=chat_id, incoming=True))
-        typing_handler = client.add_event_handler(on_typing, events.UserTyping(chats=chat_id))
-
         # Load initial messages
         messages = []
-        async for message in client.iter_messages(chat_id, limit=30):
-            sender = await message.get_sender()
-            sender_name = "You" if message.out else (sender.first_name or "Unknown")
-            messages.append(ft.Text(f"{sender_name}: {message.text}"))
-        messages.reverse()
-        messages_list_view.controls.extend(messages)
+        try:
+            async for message in client.iter_messages(chat_id, limit=50):
+                sender = await message.get_sender()
+                sender_name = "You" if message.out else (sender.first_name if hasattr(sender, 'first_name') else "Unknown")
+                
+                content = ""
+                if message.photo:
+                    # In a real app, you might want to show a placeholder and download
+                    content = "[Photo]"
+                elif message.text:
+                    content = message.text
+
+                if content:
+                    messages.append(ft.Text(f"{sender_name}: {content}"))
+            messages.reverse()
+            messages_list_view.controls.extend(messages)
+        except Exception as e:
+            messages_list_view.controls.append(ft.Text(f"Error loading messages: {e}"))
+        
         page.update()
 
     # --- Initial View --- #
