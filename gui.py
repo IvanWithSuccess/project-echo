@@ -5,6 +5,7 @@ from telethon.errors import SessionPasswordNeededError
 import asyncio
 import os
 import json
+import random
 
 # Replace with your actual API ID and Hash
 api_id = 26947469
@@ -45,7 +46,7 @@ async def main(page: ft.Page):
         page.clean()
         page.title = "Account Manager"
         accounts = load_accounts()
-        account_list_view = ft.ListView(expand=True, spacing=10)
+        account_list_view = ft.ListView(expand=True, spacing=1, padding=0)
         status_text = ft.Text()
 
         async def login_and_show_dialogs(account):
@@ -69,36 +70,43 @@ async def main(page: ft.Page):
             account = e.control.data
             await login_and_show_dialogs(account)
 
-        async def edit_notes_clicked(e):
+        async def edit_account_clicked(e):
             account_to_edit = e.control.data
             notes_textfield = ft.TextField(
                 label="Notes",
                 value=account_to_edit.get("notes", ""),
                 multiline=True,
-                min_lines=3,
+            )
+            tags_textfield = ft.TextField(
+                label="Tags (comma-separated)",
+                value=", ".join(account_to_edit.get("tags", [])),
             )
 
             def close_dialog(e):
                 page.dialog.open = False
                 page.update()
 
-            async def save_notes(e):
+            async def save_data(e):
                 all_accounts = load_accounts()
                 for acc in all_accounts:
                     if acc['session_name'] == account_to_edit['session_name']:
                         acc['notes'] = notes_textfield.value
+                        raw_tags = tags_textfield.value.strip()
+                        if raw_tags:
+                            acc['tags'] = [tag.strip() for tag in raw_tags.split(',') if tag.strip()]
+                        else:
+                            acc['tags'] = []
                         break
                 save_accounts(all_accounts)
                 page.dialog.open = False
-                page.update()
-                await show_account_manager() # Refresh the list
+                await show_account_manager()
 
             page.dialog = ft.AlertDialog(
                 modal=True,
-                title=ft.Text(f"Notes for {account_to_edit.get('phone', account_to_edit['session_name'])}"),
-                content=notes_textfield,
+                title=ft.Text(f"Edit {account_to_edit.get('phone', account_to_edit['session_name'])}"),
+                content=ft.Column([notes_textfield, tags_textfield]),
                 actions=[
-                    ft.TextButton("Save", on_click=save_notes),
+                    ft.TextButton("Save", on_click=save_data),
                     ft.TextButton("Cancel", on_click=close_dialog),
                 ],
                 actions_alignment=ft.MainAxisAlignment.END,
@@ -106,23 +114,35 @@ async def main(page: ft.Page):
             page.dialog.open = True
             page.update()
 
+        account_list_view.controls.clear()
         for acc in accounts:
-            # Ensure notes field exists for older accounts
-            if 'notes' not in acc:
-                acc['notes'] = ''
+            if 'notes' not in acc: acc['notes'] = ''
+            if 'tags' not in acc: acc['tags'] = []
             
-            account_list_view.controls.append(
-                ft.ListTile(
-                    leading=ft.Icon("person"),
-                    title=ft.Text(acc.get("phone", acc["session_name"])),
-                    subtitle=ft.Text(acc.get("notes") or "No notes", italic=True, max_lines=1),
-                    trailing=ft.Row([
+            tags = acc.get("tags", [])
+            tags_row = ft.Row(wrap=True, spacing=4, run_spacing=4)
+            if tags:
+                for tag in tags:
+                    tags_row.controls.append(ft.Chip(ft.Text(tag, size=10, weight=ft.FontWeight.BOLD), bgcolor="blue100", padding=4))
+
+            account_row = ft.Row(
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Icon("person", size=24),
+                    ft.VerticalDivider(),
+                    ft.Column([
+                        ft.Text(acc.get("phone", acc["session_name"]), weight=ft.FontWeight.BOLD),
+                        ft.Text(acc.get("notes") or "No notes", italic=True, size=12, color="grey"),
+                        tags_row
+                    ], spacing=2, expand=True),
+                    ft.Row([
                         ft.ElevatedButton("Login", on_click=login_button_clicked, data=acc),
-                        ft.IconButton(icon="edit", on_click=edit_notes_clicked, data=acc, tooltip="Edit notes")
-                    ])
-                )
+                        ft.IconButton(icon="edit", on_click=edit_account_clicked, data=acc, tooltip="Edit notes and tags")
+                    ], spacing=5)
+                ]
             )
-        
+            account_list_view.controls.append(ft.Container(account_row, padding=10, border=ft.border.only(bottom=ft.BorderSide(1, "whitesmoke"))))
+
         async def add_account_clicked(e):
             await show_login_form()
 
@@ -137,19 +157,19 @@ async def main(page: ft.Page):
                     if session_name not in existing_session_names:
                         existing_accounts.append({
                             "session_name": session_name,
-                            "phone": f"imported_{session_name}",
+                            "phone": session_name,
                             "status": "imported",
-                            "notes": ""
+                            "notes": "Imported session",
+                            "tags": []
                         })
                         imported_count += 1
             
             if imported_count > 0:
                 save_accounts(existing_accounts)
-                status_text.value = f"Successfully imported {imported_count} new session(s)."
-                await show_account_manager() # Reload the view to show imported accounts
+                await show_account_manager()
             else:
                 status_text.value = "No new session files found to import."
-            page.update()
+                page.update()
 
         page.add(
             ft.Column([
@@ -159,8 +179,8 @@ async def main(page: ft.Page):
                         ft.ElevatedButton("Import Sessions", icon="download", on_click=import_sessions_clicked),
                         ft.ElevatedButton("Add Account", icon="add", on_click=add_account_clicked)
                     ])
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                ft.Divider(),
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.Divider(height=2),
                 account_list_view,
                 status_text
             ], expand=True)
@@ -209,7 +229,7 @@ async def main(page: ft.Page):
                     
                     accounts = load_accounts()
                     if not any(a['session_name'] == session_name for a in accounts):
-                        accounts.append({"session_name": session_name, "phone": phone, "status": "active", "notes": ""})
+                        accounts.append({"session_name": session_name, "phone": phone, "status": "active", "notes": "", "tags": []})
                         save_accounts(accounts)
 
                     await show_account_manager()
@@ -220,7 +240,7 @@ async def main(page: ft.Page):
                 status_text.value = "2FA enabled. Please enter your password."
             except Exception as ex:
                 status_text.value = f"Error: {ex}"
-            page.update()
+                page.update()
 
         action_button.on_click = button_click_handler
         
@@ -239,7 +259,7 @@ async def main(page: ft.Page):
         page.title = "My Chats"
         dialogs_list_view = ft.ListView(expand=1, spacing=10)
         status_text = ft.Text("Loading chats...")
-        
+
         async def disconnect_and_go_to_manager(e):
             if client and client.is_connected():
                 await client.disconnect()
@@ -260,6 +280,9 @@ async def main(page: ft.Page):
 
         async def on_chat_click(e):
             await show_chat_messages(client, e.control.data['id'], e.control.data['name'])
+        
+        async def start_mass_send_clicked(e):
+            await show_spammer_view(client)
 
         async def load_and_display_dialogs():
             new_controls = []
@@ -297,10 +320,16 @@ async def main(page: ft.Page):
             page.update()
 
         page.add(
-            ft.Row([ft.Text("Your Chats", size=24, weight=ft.FontWeight.BOLD), ft.ElevatedButton("Back to Manager", on_click=disconnect_and_go_to_manager)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.Row([
+                ft.Text("Your Chats", size=24, weight=ft.FontWeight.BOLD), 
+                ft.Row([
+                    ft.ElevatedButton("Start Mass Send", icon="campaign", on_click=start_mass_send_clicked),
+                    ft.ElevatedButton("Back to Manager", on_click=disconnect_and_go_to_manager, bgcolor="red200")
+                ])
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             status_text, dialogs_list_view)
         await load_and_display_dialogs()
-    
+
     async def show_chat_messages(client: TelegramClient, chat_id: int, chat_name: str):
         page.clean()
         page.title = f"Chat: {chat_name}"
@@ -388,6 +417,69 @@ async def main(page: ft.Page):
         except Exception as e:
             messages_list_view.controls.append(ft.Text(f"Error loading: {e}"))
         
+        page.update()
+    
+    async def show_spammer_view(client: TelegramClient):
+        page.clean()
+        page.title = "Spammer"
+        status_text = ft.Text()
+        message_box = ft.TextField(label="Your message", multiline=True, min_lines=5, expand=True)
+        delay_slider = ft.Slider(min=1, max=60, divisions=59, label="{value}s delay", value=5)
+        
+        chats_list = ft.ListView(expand=True, spacing=5)
+        
+        all_chats = []
+        async for dialog in client.iter_dialogs():
+            if dialog.is_user or dialog.is_group:
+                all_chats.append(dialog)
+                chats_list.controls.append(
+                    ft.Checkbox(label=dialog.name, data=dialog)
+                )
+
+        async def go_back_to_dialogs(e):
+            await show_dialogs(client)
+
+        async def start_sending_click(e):
+            selected_dialogs = [cb.data for cb in chats_list.controls if cb.value]
+            message_to_send = message_box.value
+            delay = delay_slider.value
+
+            if not selected_dialogs:
+                status_text.value = "Please select at least one chat."; page.update(); return
+            if not message_to_send:
+                status_text.value = "Message cannot be empty."; page.update(); return
+
+            e.control.disabled = True
+            page.update()
+
+            count = 0
+            for dialog in selected_dialogs:
+                try:
+                    status_text.value = f"Sending to {dialog.name}..."
+                    page.update()
+                    await client.send_message(dialog.id, message_to_send)
+                    count += 1
+                    await asyncio.sleep(delay)
+                except Exception as ex:
+                    status_text.value = f"Error sending to {dialog.name}: {ex}"
+                    page.update()
+                    await asyncio.sleep(2) # Show error for a bit
+            
+            status_text.value = f"Finished sending {count} messages."
+            e.control.disabled = False
+            page.update()
+
+        page.add(
+            ft.Row([ft.ElevatedButton("Back to Chats", on_click=go_back_to_dialogs), ft.Text("Mass Sender", size=24)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.Text("1. Select chats to send to:"),
+            ft.Container(chats_list, border=ft.border.all(1, "grey"), border_radius=5, padding=5, height=200),
+            ft.Text("2. Write your message:"),
+            message_box,
+            ft.Text("3. Set delay between messages:"),
+            delay_slider,
+            ft.ElevatedButton("Start Sending", on_click=start_sending_click, icon="send"),
+            status_text
+        )
         page.update()
 
     # --- Initial View --- #
