@@ -89,6 +89,7 @@ async def main(page: ft.Page):
         
         file_picker = ft.FilePicker(on_result=send_file_result)
         page.overlay.append(file_picker)
+        page.update() # Ensure picker is registered
 
         async def go_back(e):
             client.remove_event_handler(chat_message_handler)
@@ -151,21 +152,20 @@ async def main(page: ft.Page):
                 os.remove(session_filename)
             show_welcome_view()
 
+        async def update_avatar(dialog, list_tile):
+            relative_path = await client.download_profile_photo(dialog.entity, file=f"downloads/avatars/{dialog.id}.jpg")
+            if relative_path:
+                list_tile.leading = ft.CircleAvatar(background_image_src=os.path.abspath(relative_path))
+                page.update()
+
         async def load_and_display_dialogs():
-            dialogs_list_view.controls.clear()
+            new_controls = []
             status_text.visible = True
             page.update()
             try:
                 async for dialog in client.iter_dialogs():
-                    relative_avatar_path = await client.download_profile_photo(dialog.entity, file=f"downloads/avatars/{dialog.id}.jpg")
-                    
-                    leading_avatar = None
-                    if relative_avatar_path:
-                        absolute_avatar_path = os.path.abspath(relative_avatar_path)
-                        leading_avatar = ft.CircleAvatar(background_image_src=absolute_avatar_path)
-                    else:
-                        initials = "".join([p[0] for p in dialog.name.split()[:2]]).upper()
-                        leading_avatar = ft.CircleAvatar(content=ft.Text(initials), bgcolor=random.choice(colors_for_avatars))
+                    initials = "".join([p[0] for p in dialog.name.split()[:2]]).upper()
+                    leading_avatar = ft.CircleAvatar(content=ft.Text(initials), bgcolor=random.choice(colors_for_avatars))
 
                     subtitle_text = ""
                     if dialog.message:
@@ -182,11 +182,16 @@ async def main(page: ft.Page):
                     if dialog.unread_count > 0:
                         trailing_widget = ft.CircleAvatar(content=ft.Text(str(dialog.unread_count), color="white"), bgcolor="blue400", radius=14)
                     
-                    dialogs_list_view.controls.append(ft.ListTile(
+                    list_tile = ft.ListTile(
                         leading=leading_avatar,
                         title=ft.Text(dialog.name, weight=ft.FontWeight.BOLD),
                         subtitle=ft.Text(subtitle_text, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, size=14),
-                        trailing=trailing_widget, data=dialog.id, on_click=on_chat_click))
+                        trailing=trailing_widget, data=dialog.id, on_click=on_chat_click)
+                    
+                    new_controls.append(list_tile)
+                    asyncio.create_task(update_avatar(dialog, list_tile))
+
+                dialogs_list_view.controls = new_controls
                 status_text.visible = False
             except Exception as e:
                 status_text.value = f"Error loading chats: {e}"
