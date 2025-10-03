@@ -14,7 +14,6 @@ async def main(page: ft.Page):
     page.title = "Telegram Client"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
 
-    # Create directories for downloads if they don't exist
     if not os.path.exists("downloads/avatars"):
         os.makedirs("downloads/avatars")
 
@@ -159,7 +158,7 @@ async def main(page: ft.Page):
                     
                     leading_avatar = None
                     if avatar_path:
-                        leading_avatar = ft.CircleAvatar(background_image_url=avatar_path)
+                        leading_avatar = ft.CircleAvatar(background_image_src=avatar_path)
                     else:
                         initials = "".join([p[0] for p in dialog.name.split()[:2]]).upper()
                         leading_avatar = ft.CircleAvatar(content=ft.Text(initials), bgcolor=random.choice(colors_for_avatars))
