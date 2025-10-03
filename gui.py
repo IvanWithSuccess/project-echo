@@ -120,14 +120,14 @@ async def main(page: ft.Page):
         for acc in accounts:
             tags_row = ft.Row(wrap=True, spacing=4, run_spacing=4)
             for tag in acc.get("tags", []):
-                tags_row.controls.append(ft.Chip(ft.Text(tag, size=10), bgcolor=ft.colors.BLUE_100, padding=4))
+                tags_row.controls.append(ft.Chip(ft.Text(tag, size=10), bgcolor="blue_100", padding=4))
             account_list_view.controls.append(ft.Container(
                 content=ft.Row(vertical_alignment=ft.CrossAxisAlignment.CENTER, controls=[
                     ft.Icon("person_outline", size=24),
                     ft.VerticalDivider(),
                     ft.Column([
                         ft.Text(acc.get("phone", acc["session_name"]), weight=ft.FontWeight.BOLD),
-                        ft.Text(acc.get("notes") or "No notes", italic=True, size=12, color=ft.colors.GREY),
+                        ft.Text(acc.get("notes") or "No notes", italic=True, size=12, color="grey"),
                         tags_row
                     ], spacing=2, expand=True),
                     ft.Row([
@@ -135,7 +135,7 @@ async def main(page: ft.Page):
                         ft.IconButton(icon="edit_note", on_click=edit_account_clicked, data=acc, tooltip="Edit notes and tags")
                     ], spacing=5)
                 ]),
-                padding=10, border=ft.border.only(bottom=ft.BorderSide(1, ft.colors.WHITE_SMOKE))
+                padding=10, border=ft.border.only(bottom=ft.BorderSide(1, "whitesmoke"))
             ))
 
         content_area.content = ft.Column([
@@ -214,7 +214,7 @@ async def main(page: ft.Page):
         content_area.content = ft.Column([
             ft.Row([
                 ft.Text("Your Chats", size=24, weight=ft.FontWeight.BOLD),
-                ft.ElevatedButton("Logout", icon="logout", on_click=disconnect_and_go_back, bgcolor=ft.colors.RED_200)
+                ft.ElevatedButton("Logout", icon="logout", on_click=disconnect_and_go_back, bgcolor="red_200")
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             status_text,
             dialogs_list_view
@@ -226,7 +226,7 @@ async def main(page: ft.Page):
                 initials = "".join([p[0] for p in dialog.name.split()[:2]]).upper()
                 trailing_widget = None
                 if dialog.unread_count > 0:
-                    trailing_widget = ft.CircleAvatar(content=ft.Text(str(dialog.unread_count)), bgcolor=ft.colors.BLUE_400, radius=12)
+                    trailing_widget = ft.CircleAvatar(content=ft.Text(str(dialog.unread_count)), bgcolor="blue_400", radius=12)
                 list_tile = ft.ListTile(
                     leading=ft.CircleAvatar(content=ft.Text(initials)),
                     title=ft.Text(dialog.name, weight=ft.FontWeight.BOLD),
@@ -283,7 +283,7 @@ async def main(page: ft.Page):
             delay = int(delay_slider.value)
 
             if not all([senders, targets, message]):
-                status_log.controls.append(ft.Text("Error: Senders, targets, and message are required.", color=ft.colors.RED))
+                status_log.controls.append(ft.Text("Error: Senders, targets, and message are required.", color="red"))
                 page.update()
                 return
 
@@ -297,7 +297,7 @@ async def main(page: ft.Page):
                 try:
                     await client.connect()
                     if not await client.is_user_authorized():
-                        status_log.controls.append(ft.Text(f"    -> Auth failed, skipping.", color=ft.colors.RED))
+                        status_log.controls.append(ft.Text(f"    -> Auth failed, skipping.", color="red"))
                         continue
 
                     for target in targets:
@@ -305,15 +305,15 @@ async def main(page: ft.Page):
                             status_log.controls.append(ft.Text(f"    -> Sending to {target}..."))
                             page.update()
                             await client.send_message(target, message)
-                            status_log.controls.append(ft.Text(f"    -> Success! Waiting for {delay}s.", color=ft.colors.GREEN))
+                            status_log.controls.append(ft.Text(f"    -> Success! Waiting for {delay}s.", color="green"))
                             page.update()
                             await asyncio.sleep(delay)
                         except FloodWaitError as fwe:
-                            status_log.controls.append(ft.Text(f"    -> Flood wait! Sleeping for {fwe.seconds}s.", color=ft.colors.ORANGE))
+                            status_log.controls.append(ft.Text(f"    -> Flood wait! Sleeping for {fwe.seconds}s.", color="orange"))
                             page.update()
                             await asyncio.sleep(fwe.seconds)
                         except Exception as ex:
-                            status_log.controls.append(ft.Text(f"    -> Failed to send to {target}: {ex}", color=ft.colors.RED))
+                            status_log.controls.append(ft.Text(f"    -> Failed to send to {target}: {ex}", color="red"))
                             page.update()
                 finally:
                     if client.is_connected(): await client.disconnect()
@@ -327,7 +327,7 @@ async def main(page: ft.Page):
         content_area.content = ft.Column([
             ft.Text("Ad Cabinet", size=24, weight=ft.FontWeight.BOLD),
             ft.Text("1. Select accounts to send from:"),
-            ft.Container(content=ft.Column(sender_checkboxes), border=ft.border.all(1, ft.colors.BLACK26), padding=10, border_radius=5),
+            ft.Container(content=ft.Column(sender_checkboxes), border=ft.border.all(1, "black26"), padding=10, border_radius=5),
             ft.Text("2. Enter target chats (one per line):"),
             target_chats_field,
             ft.Text("3. Compose your message:"),
@@ -337,7 +337,7 @@ async def main(page: ft.Page):
             ft.ElevatedButton("Start Sending", icon="rocket_launch", on_click=start_sending_click),
             ft.Divider(),
             ft.Text("Status Log:"),
-            ft.Container(content=status_log, expand=True, border=ft.border.all(1, ft.colors.BLACK26), padding=10, border_radius=5)
+            ft.Container(content=status_log, expand=True, border=ft.border.all(1, "black26"), padding=10, border_radius=5)
         ], expand=True, scroll=ft.ScrollMode.ADAPTIVE)
         page.update()
 
