@@ -197,7 +197,7 @@ async def main(page: ft.Page):
                 tags_row.controls.append(ft.Chip(ft.Text(tag, size=10), bgcolor="blue_100", padding=4))
             
             status_indicator = ft.Icon(
-                name=ft.icons.CIRCLE,
+                name="circle",
                 color=status_colors.get(acc.get('status', 'unknown')), 
                 size=12,
                 tooltip=f"Status: {acc.get('status', 'unknown')}"
