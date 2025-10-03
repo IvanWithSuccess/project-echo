@@ -21,7 +21,7 @@ async def main(page: ft.Page):
     client_holder = {"client": None}
     handler_holder = {"dialog_handler": None}
 
-    async def show_welcome_view():
+    def show_welcome_view():
         page.clean()
         page.title = "Welcome"
         session_files = [f for f in os.listdir('.') if f.endswith('.session')]
@@ -37,10 +37,10 @@ async def main(page: ft.Page):
             if await client.is_user_authorized():
                 await show_dialogs(client)
             else:
-                await show_login_form(session_name.replace('.session',''))
+                show_login_form(session_name.replace('.session',''))
 
-        async def register_new(e):
-            await show_login_form()
+        def register_new(e):
+            show_login_form()
         
         page.add(ft.Column([
             ft.Text("Welcome to Telegram Client", size=24), 
@@ -49,7 +49,7 @@ async def main(page: ft.Page):
             ft.Text("Or"),
             ft.ElevatedButton("Register a New Account", on_click=register_new, width=300)
         ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15))
-        await page.update_async()
+        page.update()
 
     async def show_chat_messages(client: TelegramClient, chat_id: int, chat_name: str):
         page.clean()
@@ -76,7 +76,7 @@ async def main(page: ft.Page):
                 typing_indicator.value = f"{list(typing_users)[0]} is typing..."
             else:
                 typing_indicator.value = f"{len(typing_users)} people are typing..."
-            await page.update_async()
+            page.update()
 
         async def on_new_message(event):
             sender = await event.get_sender()
@@ -85,7 +85,7 @@ async def main(page: ft.Page):
             if event.photo:
                 temp_msg = ft.Text(f"{sender_name}: [Downloading photo...]")
                 messages_list_view.controls.append(temp_msg)
-                await page.update_async()
+                page.update()
                 relative_path = await client.download_media(event.photo, file="downloads/")
                 absolute_path = os.path.abspath(relative_path)
                 messages_list_view.controls.remove(temp_msg)
@@ -94,14 +94,14 @@ async def main(page: ft.Page):
                 messages_list_view.controls.append(ft.Text(f"{sender_name}: {event.text}"))
             
             messages_list_view.scroll_to(offset=-1, duration=300)
-            await page.update_async()
+            page.update()
 
         async def send_file_result(e: ft.FilePickerResultEvent):
             if e.files:
                 picked_file_path = e.files[0].path
                 messages_list_view.controls.append(ft.Column([ft.Text("You:"), ft.Image(src=picked_file_path, height=200)]))
                 messages_list_view.scroll_to(offset=-1, duration=300)
-                await page.update_async()
+                page.update()
                 await client.send_file(chat_id, picked_file_path)
                 await client.send_read_acknowledge(chat_id)
 
@@ -122,7 +122,7 @@ async def main(page: ft.Page):
                 messages_list_view.controls.append(ft.Text(f"You: {text}"))
                 messages_list_view.scroll_to(offset=-1, duration=300)
                 message_input.value = ""
-                await page.update_async()
+                page.update()
                 await client.send_message(chat_id, text)
                 await client.send_read_acknowledge(chat_id)
 
@@ -137,7 +137,7 @@ async def main(page: ft.Page):
             typing_indicator,
             ft.Row([attach_button, message_input, send_button])
         )
-        await page.update_async()
+        page.update()
 
         message_handler = on_new_message
         typing_handler = on_typing
@@ -158,10 +158,10 @@ async def main(page: ft.Page):
                     messages.append(ft.Text(f"{sender_name}: {message.text}"))
             messages.reverse()
             messages_list_view.controls.extend(messages)
-            await page.update_async()
+            page.update()
         except Exception as e:
             messages_list_view.controls.append(ft.Text(f"Error loading messages: {e}"))
-            await page.update_async()
+            page.update()
 
     async def show_dialogs(client: TelegramClient):
         page.clean()
@@ -180,18 +180,18 @@ async def main(page: ft.Page):
             client_holder["client"] = None
             if os.path.exists(session_filename):
                 os.remove(session_filename)
-            await show_welcome_view()
+            show_welcome_view()
 
         async def update_avatar(dialog, list_tile):
             relative_path = await client.download_profile_photo(dialog.entity, file=f"downloads/avatars/{dialog.id}.jpg")
             if relative_path:
                 list_tile.leading.background_image_src = os.path.abspath(relative_path)
-                await page.update_async()
+                page.update()
 
         async def load_and_display_dialogs():
             new_controls = []
             status_text.visible = True
-            await page.update_async()
+            page.update()
             try:
                 async for dialog in client.iter_dialogs():
                     initials = "".join([p[0] for p in dialog.name.split()[:2]]).upper()
@@ -225,7 +225,7 @@ async def main(page: ft.Page):
                 status_text.visible = False
             except Exception as e:
                 status_text.value = f"Error loading chats: {e}"
-            await page.update_async()
+            page.update()
 
         async def on_dialog_update(event):
             await load_and_display_dialogs()
@@ -243,7 +243,7 @@ async def main(page: ft.Page):
         client.add_event_handler(on_dialog_update, events.Raw)
         await load_and_display_dialogs()
 
-    async def show_login_form(session_name=None):
+    def show_login_form(session_name=None):
         page.clean()
         page.title = "Telegram Registration"
         session_name_field = ft.TextField(label="Session Name", value=session_name, disabled=bool(session_name), width=300)
@@ -262,7 +262,7 @@ async def main(page: ft.Page):
                     phone = phone_number_field.value.strip()
                     if not s_name or not phone: 
                         status_text.value = "Session and Phone are required."
-                        await page.update_async()
+                        page.update()
                         return
                     client = TelegramClient(s_name, api_id, api_hash)
                     client_holder["client"] = client
@@ -285,13 +285,13 @@ async def main(page: ft.Page):
                 status_text.value = "2FA enabled. Please enter your password."
             except Exception as ex:
                 status_text.value = f"Error: {ex}"
-            await page.update_async()
+            page.update()
 
         action_button.on_click = button_click_handler
         page.add(ft.Column([ft.Text("Account Registration", size=24), session_name_field, phone_number_field, code_field, password_field, action_button, status_text], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20))
-        await page.update_async()
+        page.update()
 
-    await show_welcome_view()
+    show_welcome_view()
 
 if __name__ == "__main__":
     ft.app(target=main)
