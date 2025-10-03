@@ -55,6 +55,16 @@ async def main(page: ft.Page):
 
     client_holder = {"client": None}
     main_content_area = ft.Container(expand=True)
+    
+    # --- File Picker --- #
+    async def on_file_picker_result(e: ft.FilePickerResultEvent):
+        if e.files and len(e.files) > 0:
+            selected_file_path.value = e.files[0].path
+            page.update()
+
+    file_picker = ft.FilePicker(on_result=on_file_picker_result)
+    page.overlay.append(file_picker)
+    selected_file_path = ft.Text()
 
     async def show_account_manager_view():
         await show_account_manager(main_content_area)
@@ -378,6 +388,7 @@ async def main(page: ft.Page):
             targets = [line.strip() for line in target_chats_field.value.splitlines() if line.strip()]
             message = message_box.value
             delay = int(delay_slider.value)
+            media_path = selected_file_path.value
 
             if not all([senders, targets, message]):
                 local_log("Error: Senders, targets, and message are required.")
@@ -400,7 +411,12 @@ async def main(page: ft.Page):
                     for target in targets:
                         try:
                             local_log(f"    -> Sending to {target} from {phone_display}...")
-                            await client.send_message(target, message)
+                            if media_path and os.path.exists(media_path):
+                                await client.send_file(target, file=media_path, caption=message)
+                                local_log("    -> Sent with media.")
+                            else:
+                                await client.send_message(target, message)
+                                local_log("    -> Sent text only.")
                             local_log(f"    -> Success! Waiting for {delay}s.")
                             await asyncio.sleep(delay)
                         except FloodWaitError as fwe:
@@ -424,6 +440,7 @@ async def main(page: ft.Page):
             target_chats_field,
             ft.Text("3. Compose your message:"),
             message_box,
+            ft.Row([ft.ElevatedButton("Select Media", icon="attach_file", on_click=lambda _: file_picker.pick_files()), selected_file_path]),
             ft.Text("4. Set delay between messages:"),
             delay_slider,
             ft.ElevatedButton("Start Sending", icon="rocket_launch", on_click=start_sending_click),
