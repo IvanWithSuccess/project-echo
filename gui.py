@@ -30,7 +30,7 @@ async def main(page: ft.Page):
 
         if not session_name or not phone_number:
             status_text.value = "Please fill in all fields."
-            await page.update_async()
+            await page.update()
             return
 
         client = TelegramClient(session_name, api_id, api_hash)
@@ -39,7 +39,7 @@ async def main(page: ft.Page):
 
         if not await client.is_user_authorized():
             status_text.value = "Sending confirmation code..."
-            await page.update_async()
+            await page.update()
             try:
                 await client.send_code_request(phone_number)
                 phone_number_field.visible = False
@@ -51,13 +51,13 @@ async def main(page: ft.Page):
         else:
             status_text.value = "You are already signed in."
         
-        await page.update_async()
+        await page.update()
 
     async def sign_in_click(e):
         client = client_holder.get("client")
         if not client:
             status_text.value = "Client not initialized. Please start over."
-            await page.update_async()
+            await page.update()
             return
 
         phone_number = phone_number_field.value.strip()
@@ -86,7 +86,7 @@ async def main(page: ft.Page):
         except Exception as ex:
             status_text.value = f"Sign-in error: {ex}"
         
-        await page.update_async()
+        await page.update()
 
     async def button_logic_handler(e):
         if register_button.text == "Get Code":
@@ -113,7 +113,7 @@ async def main(page: ft.Page):
             spacing=20
         )
     )
-    await page.update_async()
+    await page.update()
 
 if __name__ == "__main__":
     ft.app(target=main)
