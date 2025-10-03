@@ -21,7 +21,7 @@ async def main(page: ft.Page):
     client_holder = {"client": None}
     handler_holder = {"dialog_handler": None}
 
-    def show_welcome_view():
+    async def show_welcome_view():
         page.clean()
         page.title = "Welcome"
         session_files = [f for f in os.listdir('.') if f.endswith('.session')]
@@ -37,10 +37,10 @@ async def main(page: ft.Page):
             if await client.is_user_authorized():
                 await show_dialogs(client)
             else:
-                show_login_form(session_name.replace('.session',''))
+                await show_login_form(session_name.replace('.session',''))
 
-        def register_new(e):
-            show_login_form()
+        async def register_new(e):
+            await show_login_form()
         
         page.add(ft.Column([
             ft.Text("Welcome to Telegram Client", size=24), 
@@ -49,7 +49,7 @@ async def main(page: ft.Page):
             ft.Text("Or"),
             ft.ElevatedButton("Register a New Account", on_click=register_new, width=300)
         ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=15))
-        page.update()
+        await page.update_async()
 
     async def show_chat_messages(client: TelegramClient, chat_id: int, chat_name: str):
         page.clean()
@@ -129,7 +129,6 @@ async def main(page: ft.Page):
         send_button = ft.IconButton(icon="send_rounded", on_click=send_message_click)
         attach_button = ft.IconButton(icon="attach_file", on_click=lambda _: file_picker.pick_files(allow_multiple=False, allowed_extensions=["jpg", "jpeg", "png", "gif"]))
         
-        # Correct Initialization Order
         page.overlay.append(file_picker)
         page.add(
             ft.Row([back_button]),
@@ -140,13 +139,11 @@ async def main(page: ft.Page):
         )
         await page.update_async()
 
-        # Add handlers AFTER UI is built
         message_handler = on_new_message
         typing_handler = on_typing
         client.add_event_handler(message_handler, events.NewMessage(chats=chat_id, incoming=True))
         client.add_event_handler(typing_handler, events.UserTyping(chats=chat_id))
 
-        # Load initial messages
         try:
             messages = []
             async for message in client.iter_messages(chat_id, limit=50):
