@@ -215,7 +215,7 @@ async def main(page: ft.Page):
 
                     trailing_widget = None
                     if dialog.unread_count > 0:
-                        trailing_widget = ft.CircleAvatar(content=ft.Text(str(dialog.unread_count)), bgcolor=ft.colors.BLUE_400, radius=12)
+                        trailing_widget = ft.CircleAvatar(content=ft.Text(str(dialog.unread_count)), bgcolor="blue400", radius=12) # Use string for color
                     
                     list_tile = ft.ListTile(
                         leading=leading_avatar, 
