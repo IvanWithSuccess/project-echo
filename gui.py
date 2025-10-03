@@ -48,7 +48,6 @@ async def main(page: ft.Page):
             session_name = account['session_name']
             client = TelegramClient(session_name, api_id, api_hash)
             client_holder["client"] = client
-            # Simple status update
             status_text.value = f"Connecting with {account.get('phone', session_name)}..."
             page.update()
             try:
@@ -56,29 +55,37 @@ async def main(page: ft.Page):
                 if await client.is_user_authorized():
                     await show_dialogs(client)
                 else:
-                    # This case might happen if session is corrupted or logged out remotely
                     status_text.value = f"Session for {session_name} is invalid. Please re-add."
                     page.update()
             except Exception as e:
                 status_text.value = f"Failed to connect: {e}"
                 page.update()
 
+        async def login_button_clicked(e):
+            account = e.control.data
+            await login_and_show_dialogs(account)
+
         for acc in accounts:
+            login_button = ft.ElevatedButton("Login", on_click=login_button_clicked, data=acc)
             account_list_view.controls.append(
                 ft.ListTile(
                     leading=ft.Icon(ft.icons.PERSON),
                     title=ft.Text(acc.get("phone", acc["session_name"])),
                     subtitle=ft.Text(f"Status: {acc.get('status', 'unknown')}"),
-                    trailing=ft.ElevatedButton("Login", on_click=lambda _, account=acc: login_and_show_dialogs(account))
+                    trailing=login_button
                 )
             )
         
         status_text = ft.Text()
+        
+        async def add_account_clicked(e):
+            await show_login_form()
+
         page.add(
             ft.Row(
                 [
                     ft.Text("Accounts", size=24, weight=ft.FontWeight.BOLD),
-                    ft.ElevatedButton("Add Account", icon="add", on_click=lambda _: show_login_form()),
+                    ft.ElevatedButton("Add Account", icon="add", on_click=add_account_clicked),
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN
             ),
@@ -88,7 +95,7 @@ async def main(page: ft.Page):
         )
         page.update()
 
-    def show_login_form():
+    async def show_login_form():
         page.clean()
         page.title = "Add New Account"
         phone_number_field = ft.TextField(label="Phone Number (+1234567890)", width=300)
@@ -100,7 +107,7 @@ async def main(page: ft.Page):
         async def button_click_handler(e):
             btn_text = e.control.text
             phone = phone_number_field.value.strip()
-            session_name = phone.replace('+','') # Use phone as session name
+            session_name = phone.replace('+', '')
             client = client_holder.get("client")
             
             try:
@@ -128,9 +135,7 @@ async def main(page: ft.Page):
                     else:
                         await client.sign_in(phone, code_field.value.strip())
                     
-                    # Save account to JSON
                     accounts = load_accounts()
-                    # Avoid duplicates
                     if not any(a['session_name'] == session_name for a in accounts):
                         accounts.append({
                             "session_name": session_name,
@@ -150,7 +155,11 @@ async def main(page: ft.Page):
             page.update()
 
         action_button.on_click = button_click_handler
-        back_button = ft.ElevatedButton("Back to Manager", on_click=lambda _: show_account_manager())
+        
+        async def go_to_manager(e):
+            await show_account_manager()
+
+        back_button = ft.ElevatedButton("Back to Manager", on_click=go_to_manager)
 
         page.add(ft.Column([
             ft.Row([back_button]),
@@ -166,7 +175,8 @@ async def main(page: ft.Page):
         status_text = ft.Text("Loading chats...")
         
         async def disconnect_and_go_to_manager(e):
-            await client.disconnect()
+            if client and client.is_connected():
+                await client.disconnect()
             client_holder["client"] = None
             await show_account_manager()
 
@@ -175,6 +185,9 @@ async def main(page: ft.Page):
             if relative_path:
                 list_tile.leading.background_image_src = os.path.abspath(relative_path)
                 page.update()
+
+        async def on_chat_click(e):
+            await show_chat_messages(client, e.control.data, e.control.title.value)
 
         async def load_and_display_dialogs():
             new_controls = []
@@ -195,7 +208,7 @@ async def main(page: ft.Page):
                     list_tile = ft.ListTile(
                         leading=leading_avatar, title=ft.Text(dialog.name, weight=ft.FontWeight.BOLD),
                         subtitle=ft.Text(subtitle_text, max_lines=1),
-                        data=dialog.id, on_click=lambda e: show_chat_messages(client, e.control.data, e.control.title.value))
+                        data=dialog.id, on_click=on_chat_click)
                     
                     new_controls.append(list_tile)
                     asyncio.create_task(update_avatar(dialog, list_tile))
@@ -216,17 +229,32 @@ async def main(page: ft.Page):
         await load_and_display_dialogs()
     
     async def show_chat_messages(client: TelegramClient, chat_id: int, chat_name: str):
-        # This function remains largely the same as before
         page.clean()
         page.title = f"Chat: {chat_name}"
         messages_list_view = ft.ListView(expand=True, spacing=10, auto_scroll=True)
         typing_indicator = ft.Text("", italic=True, size=12)
         
+        message_handler = None
+        typing_handler = None
+
+        async def on_new_message(event):
+            sender = await event.get_sender()
+            sender_name = sender.first_name if hasattr(sender, 'first_name') else "Unknown"
+            messages_list_view.controls.append(ft.Text(f"{sender_name}: {event.text}"))
+            page.update()
+
+        async def on_typing(event):
+            user = await event.get_user()
+            name = user.first_name if user and user.first_name else "Someone"
+            typing_indicator.value = f"{name} is typing..."
+            page.update()
+            await asyncio.sleep(2) # Show indicator for a bit
+            typing_indicator.value = ""
+            page.update()
+
         async def go_back(e):
-            # Clean up chat-specific handlers before going back
-            for handler, event in client.list_event_handlers():
-                if event.chats and chat_id in event.chats:
-                    client.remove_event_handler(handler, event)
+            if message_handler: client.remove_event_handler(message_handler)
+            if typing_handler: client.remove_event_handler(typing_handler)
             await show_dialogs(client)
 
         back_button = ft.ElevatedButton("Back to Chats", on_click=go_back)
@@ -241,12 +269,20 @@ async def main(page: ft.Page):
                 page.update()
 
         send_button = ft.IconButton(icon="send_rounded", on_click=send_message_click)
-        page.add(back_button, messages_list_view, ft.Row([message_input, send_button]))
+        page.add(ft.Row([back_button]), messages_list_view, typing_indicator, ft.Row([message_input, send_button]))
         
+        # Add handlers
+        message_handler = client.add_event_handler(on_new_message, events.NewMessage(chats=chat_id, incoming=True))
+        typing_handler = client.add_event_handler(on_typing, events.UserTyping(chats=chat_id))
+
+        # Load initial messages
+        messages = []
         async for message in client.iter_messages(chat_id, limit=30):
             sender = await message.get_sender()
             sender_name = "You" if message.out else (sender.first_name or "Unknown")
-            messages_list_view.controls.insert(0, ft.Text(f"{sender_name}: {message.text}"))
+            messages.append(ft.Text(f"{sender_name}: {message.text}"))
+        messages.reverse()
+        messages_list_view.controls.extend(messages)
         page.update()
 
     # --- Initial View --- #
