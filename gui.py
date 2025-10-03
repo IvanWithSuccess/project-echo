@@ -13,6 +13,9 @@ async def main(page: ft.Page):
     page.title = "Telegram Client"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
 
+    if not os.path.exists("downloads"):
+        os.makedirs("downloads")
+
     client_holder = {"client": None}
     handler_holder = {"dialog_handler": None}
 
@@ -53,58 +56,80 @@ async def main(page: ft.Page):
         messages_list_view = ft.ListView(expand=True, spacing=10, auto_scroll=True)
         chat_message_handler = None
 
-        # This handler is NOW ONLY for INCOMING messages
         async def on_new_message(event):
-            if not event.text:
-                return
             sender = await event.get_sender()
             sender_name = sender.first_name if hasattr(sender, 'first_name') else "Unknown"
-            messages_list_view.controls.append(ft.Text(f"{sender_name}: {event.text}"))
+
+            if event.photo:
+                temp_msg = ft.Text(f"{sender_name}: [Downloading photo...]")
+                messages_list_view.controls.append(temp_msg)
+                page.update()
+                file_path = await client.download_media(event.photo, file="downloads/")
+                messages_list_view.controls.remove(temp_msg)
+                messages_list_view.controls.append(ft.Column([ft.Text(sender_name), ft.Image(src=file_path, height=200)]))
+            elif event.text:
+                messages_list_view.controls.append(ft.Text(f"{sender_name}: {event.text}"))
+            
             messages_list_view.scroll_to(offset=-1, duration=300)
             page.update()
 
         chat_message_handler = on_new_message
-        # Listen ONLY for incoming messages to prevent duplication
         client.add_event_handler(chat_message_handler, events.NewMessage(chats=chat_id, incoming=True))
+
+        async def send_file_result(e: ft.FilePickerResultEvent):
+            if e.files:
+                picked_file_path = e.files[0].path
+                messages_list_view.controls.append(ft.Column([ft.Text("You:"), ft.Image(src=picked_file_path, height=200)]))
+                messages_list_view.scroll_to(offset=-1, duration=300)
+                page.update()
+                await client.send_file(chat_id, picked_file_path)
+                await client.send_read_acknowledge(chat_id)
+        
+        file_picker = ft.FilePicker(on_result=send_file_result)
+        page.overlay.append(file_picker)
 
         async def go_back(e):
             client.remove_event_handler(chat_message_handler)
+            page.overlay.remove(file_picker) # Clean up the picker
             await show_dialogs(client)
 
         back_button = ft.ElevatedButton("Back to Chats", on_click=go_back)
         message_input = ft.TextField(hint_text="Type a message...", expand=True)
 
         async def send_message_click(e):
-            message_text = message_input.value
-            if message_text:
-                # 1. Add to UI immediately for instant feedback
-                messages_list_view.controls.append(ft.Text(f"You: {message_text}"))
+            if message_input.value:
+                messages_list_view.controls.append(ft.Text(f"You: {message_input.value}"))
                 messages_list_view.scroll_to(offset=-1, duration=300)
+                text = message_input.value
                 message_input.value = ""
                 page.update()
-                
-                # 2. Send the message via the API
-                await client.send_message(chat_id, message_text)
-                
-                # 3. Explicitly mark the chat as read to fix the unread count bug
+                await client.send_message(chat_id, text)
                 await client.send_read_acknowledge(chat_id)
 
         send_button = ft.IconButton(icon="send_rounded", on_click=send_message_click)
+        attach_button = ft.IconButton(
+            icon="attach_file", 
+            on_click=lambda _: file_picker.pick_files(allow_multiple=False, allowed_extensions=["jpg", "jpeg", "png", "gif"])
+        )
 
         page.add(
             ft.Row([back_button]),
             ft.Text(f"Messages for {chat_name}", size=20, weight=ft.FontWeight.BOLD),
             messages_list_view,
-            ft.Row([message_input, send_button])
+            ft.Row([attach_button, message_input, send_button])
         )
         page.update()
 
+        # Load initial messages
         try:
             messages = []
             async for message in client.iter_messages(chat_id, limit=50):
-                if message and message.text:
-                    sender = await message.get_sender()
-                    sender_name = "You" if message.out else (sender.first_name if hasattr(sender, 'first_name') else "Unknown")
+                sender = await message.get_sender()
+                sender_name = "You" if message.out else (sender.first_name if hasattr(sender, 'first_name') else "Unknown")
+                if message.photo:
+                    file_path = await client.download_media(message.photo, file="downloads/")
+                    messages.append(ft.Column([ft.Text(sender_name), ft.Image(src=file_path, height=200)]))
+                elif message.text:
                     messages.append(ft.Text(f"{sender_name}: {message.text}"))
             messages.reverse()
             messages_list_view.controls.extend(messages)
@@ -135,9 +160,16 @@ async def main(page: ft.Page):
             page.update()
             try:
                 async for dialog in client.iter_dialogs():
-                    subtitle_text = "[Media or service message]"
-                    if dialog.message and dialog.message.text:
-                        subtitle_text = f"You: {dialog.message.text}" if dialog.message.out else dialog.message.text
+                    subtitle_text = ""
+                    if dialog.message:
+                        if dialog.message.photo:
+                            subtitle_text = "[Photo]"
+                        elif dialog.message.text:
+                            subtitle_text = dialog.message.text
+                        else:
+                            subtitle_text = "[Media or service message]"
+                        if dialog.message.out:
+                            subtitle_text = f"You: {subtitle_text}"
                     trailing_widget = None
                     if dialog.unread_count > 0:
                         trailing_widget = ft.CircleAvatar(content=ft.Text(str(dialog.unread_count), color="white"), bgcolor="blue400", radius=14)
@@ -156,14 +188,14 @@ async def main(page: ft.Page):
         handler_holder["dialog_handler"] = on_dialog_update
 
         async def on_chat_click(e):
-            if handler_holder["dialog_handler"]:
-                client.remove_event_handler(handler_holder["dialog_handler"], events.NewMessage)
-                client.remove_event_handler(handler_holder["dialog_handler"], events.MessageRead)
+            if handler_holder.get("dialog_handler"):
+                client.remove_event_handler(handler_holder["dialog_handler"])
+                handler_holder["dialog_handler"] = None
+            await client.send_read_acknowledge(e.control.data)
             await show_chat_messages(client, e.control.data, e.control.title.value)
 
         page.add(ft.Row([ft.Text("Your Chats", size=24, weight=ft.FontWeight.BOLD), ft.ElevatedButton("Logout", on_click=logout_and_cleanup, bgcolor="red_200")], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), status_text, dialogs_list_view)
-        client.add_event_handler(on_dialog_update, events.NewMessage)
-        client.add_event_handler(on_dialog_update, events.MessageRead)
+        client.add_event_handler(on_dialog_update, events.Raw)
         await load_and_display_dialogs()
 
     def show_login_form(session_name=None):
