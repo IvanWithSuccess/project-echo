@@ -4,6 +4,7 @@ from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
 import asyncio
 import os
+import random
 
 # Replace with your actual API ID and Hash
 api_id = 26947469
@@ -13,8 +14,9 @@ async def main(page: ft.Page):
     page.title = "Telegram Client"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
 
-    if not os.path.exists("downloads"):
-        os.makedirs("downloads")
+    # Create directories for downloads if they don't exist
+    if not os.path.exists("downloads/avatars"):
+        os.makedirs("downloads/avatars")
 
     client_holder = {"client": None}
     handler_holder = {"dialog_handler": None}
@@ -90,7 +92,7 @@ async def main(page: ft.Page):
 
         async def go_back(e):
             client.remove_event_handler(chat_message_handler)
-            page.overlay.remove(file_picker) # Clean up the picker
+            page.overlay.remove(file_picker)
             await show_dialogs(client)
 
         back_button = ft.ElevatedButton("Back to Chats", on_click=go_back)
@@ -98,29 +100,20 @@ async def main(page: ft.Page):
 
         async def send_message_click(e):
             if message_input.value:
-                messages_list_view.controls.append(ft.Text(f"You: {message_input.value}"))
-                messages_list_view.scroll_to(offset=-1, duration=300)
                 text = message_input.value
+                messages_list_view.controls.append(ft.Text(f"You: {text}"))
+                messages_list_view.scroll_to(offset=-1, duration=300)
                 message_input.value = ""
                 page.update()
                 await client.send_message(chat_id, text)
                 await client.send_read_acknowledge(chat_id)
 
         send_button = ft.IconButton(icon="send_rounded", on_click=send_message_click)
-        attach_button = ft.IconButton(
-            icon="attach_file", 
-            on_click=lambda _: file_picker.pick_files(allow_multiple=False, allowed_extensions=["jpg", "jpeg", "png", "gif"])
-        )
+        attach_button = ft.IconButton(icon="attach_file", on_click=lambda _: file_picker.pick_files(allow_multiple=False, allowed_extensions=["jpg", "jpeg", "png", "gif"]))
 
-        page.add(
-            ft.Row([back_button]),
-            ft.Text(f"Messages for {chat_name}", size=20, weight=ft.FontWeight.BOLD),
-            messages_list_view,
-            ft.Row([attach_button, message_input, send_button])
-        )
+        page.add(ft.Row([back_button]), ft.Text(f"Messages for {chat_name}", size=20, weight=ft.FontWeight.BOLD), messages_list_view, ft.Row([attach_button, message_input, send_button]))
         page.update()
 
-        # Load initial messages
         try:
             messages = []
             async for message in client.iter_messages(chat_id, limit=50):
@@ -142,6 +135,8 @@ async def main(page: ft.Page):
         page.title = "My Chats"
         dialogs_list_view = ft.ListView(expand=1, spacing=10)
         status_text = ft.Text("Loading chats...")
+        
+        colors_for_avatars = ["blue_200", "green_200", "red_200", "purple_200", "orange_200", "pink_200"]
 
         async def logout_and_cleanup(e):
             if handler_holder.get("dialog_handler"):
@@ -160,6 +155,15 @@ async def main(page: ft.Page):
             page.update()
             try:
                 async for dialog in client.iter_dialogs():
+                    avatar_path = await client.download_profile_photo(dialog.entity, file=f"downloads/avatars/{dialog.id}.jpg")
+                    
+                    leading_avatar = None
+                    if avatar_path:
+                        leading_avatar = ft.CircleAvatar(background_image_url=avatar_path)
+                    else:
+                        initials = "".join([p[0] for p in dialog.name.split()[:2]]).upper()
+                        leading_avatar = ft.CircleAvatar(content=ft.Text(initials), bgcolor=random.choice(colors_for_avatars))
+
                     subtitle_text = ""
                     if dialog.message:
                         if dialog.message.photo:
@@ -170,10 +174,13 @@ async def main(page: ft.Page):
                             subtitle_text = "[Media or service message]"
                         if dialog.message.out:
                             subtitle_text = f"You: {subtitle_text}"
+
                     trailing_widget = None
                     if dialog.unread_count > 0:
                         trailing_widget = ft.CircleAvatar(content=ft.Text(str(dialog.unread_count), color="white"), bgcolor="blue400", radius=14)
+                    
                     dialogs_list_view.controls.append(ft.ListTile(
+                        leading=leading_avatar,
                         title=ft.Text(dialog.name, weight=ft.FontWeight.BOLD),
                         subtitle=ft.Text(subtitle_text, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, size=14),
                         trailing=trailing_widget, data=dialog.id, on_click=on_chat_click))
