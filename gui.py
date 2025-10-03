@@ -57,14 +57,16 @@ async def main(page: ft.Page):
     main_content_area = ft.Container(expand=True)
     
     # --- File Picker --- #
-    async def on_file_picker_result(e: ft.FilePickerResultEvent):
+    selected_file_path = ft.Text()
+    def on_file_picker_result(e: ft.FilePickerResultEvent):
         if e.files and len(e.files) > 0:
             selected_file_path.value = e.files[0].path
-            page.update()
+            selected_file_path.update()
 
     file_picker = ft.FilePicker(on_result=on_file_picker_result)
     page.overlay.append(file_picker)
-    selected_file_path = ft.Text()
+    page.update()
+
 
     async def show_account_manager_view():
         await show_account_manager(main_content_area)
@@ -102,7 +104,7 @@ async def main(page: ft.Page):
         async def check_all_accounts_status(e):
             check_btn = e.control
             check_btn.disabled = True
-            page.update()
+            await page.update()
 
             accounts = load_accounts()
             for acc in accounts:
@@ -110,7 +112,7 @@ async def main(page: ft.Page):
                 phone_display = acc.get('phone', session_name)
                 status_text.value = f"Checking {phone_display}..."
                 logging.info(f"Checking status for {phone_display}")
-                page.update()
+                await page.update()
                 
                 client = TelegramClient(session_name, api_id, api_hash)
                 try:
@@ -127,14 +129,15 @@ async def main(page: ft.Page):
                     logging.error(f"Error checking {phone_display}: {ex}")
                 
                 save_accounts(accounts)
-                await show_account_manager_view() # Refresh view after each check
+                # We need to rebuild the view to show the status change
+                await show_account_manager_view()
                 await asyncio.sleep(1) # Small delay to avoid hitting rate limits
 
             status_text.value = "All accounts checked."
             check_btn.disabled = False
-            page.update()
+            await page.update()
 
-        def edit_account_clicked(e):
+        async def edit_account_clicked(e):
             account_to_edit = e.control.data
             notes_field = ft.TextField(label="Notes", value=account_to_edit.get("notes", ""), multiline=True)
             tags_field = ft.TextField(label="Tags (comma-separated)", value=", ".join(account_to_edit.get("tags", [])))
@@ -149,12 +152,12 @@ async def main(page: ft.Page):
                 save_accounts(all_accounts)
                 logging.info(f"Account notes/tags updated for {account_to_edit.get('phone', account_to_edit['session_name'])}")
                 page.dialog.open = False
-                page.update()
+                await page.update()
                 await show_account_manager_view()
 
-            def close_dialog(e):
+            async def close_dialog(e):
                 page.dialog.open = False
-                page.update()
+                await page.update()
 
             page.dialog = ft.AlertDialog(
                 modal=True,
@@ -163,7 +166,7 @@ async def main(page: ft.Page):
                 actions=[ft.TextButton("Save", on_click=save_data), ft.TextButton("Cancel", on_click=close_dialog)],
             )
             page.dialog.open = True
-            page.update()
+            await page.update()
 
         async def add_account_clicked(e):
             await show_login_form(content_area)
@@ -243,7 +246,7 @@ async def main(page: ft.Page):
             account_list_view,
             status_text
         ], expand=True)
-        page.update()
+        await page.update()
 
     async def show_login_form(content_area):
         phone_field = ft.TextField(label="Phone Number (+1234567890)", width=300)
@@ -286,7 +289,7 @@ async def main(page: ft.Page):
             except Exception as ex:
                 status.value = f"Error: {ex}"
                 logging.error(f"Sign-in error for {phone}: {ex}")
-            page.update()
+            await page.update()
 
         signin_button = ft.ElevatedButton("Get Code", width=300, on_click=get_code_or_signin)
 
@@ -295,7 +298,7 @@ async def main(page: ft.Page):
             ft.Text("Add New Account", size=24),
             phone_field, code_field, pw_field, signin_button, status
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20)
-        page.update()
+        await page.update()
 
     async def show_dialogs_view(content_area, client):
         dialogs_list_view = ft.ListView(expand=True, spacing=10)
@@ -306,8 +309,8 @@ async def main(page: ft.Page):
 
         async def disconnect_and_go_back(e):
             if client and client.is_connected(): 
-                phone = await client.get_me()
-                logging.info(f"Logging out from {phone.phone}")
+                me = await client.get_me()
+                logging.info(f"Logging out from {me.phone}")
                 await client.disconnect()
             client_holder["client"] = None
             await show_account_manager_view()
@@ -320,7 +323,7 @@ async def main(page: ft.Page):
             status_text,
             dialogs_list_view
         ], expand=True)
-        page.update()
+        await page.update()
 
         try:
             async for dialog in client.iter_dialogs():
@@ -340,7 +343,7 @@ async def main(page: ft.Page):
         except Exception as e:
             status_text.value = f"Error loading chats: {e}"
             logging.error(f"Error loading chats: {e}")
-        page.update()
+        await page.update()
 
     async def show_chat_messages_view(content_area, client, chat_id, chat_name):
         messages_list_view = ft.ListView(expand=True, spacing=10, auto_scroll=True)
@@ -356,19 +359,19 @@ async def main(page: ft.Page):
                 await client.send_message(chat_id, message_input.value)
                 messages_list_view.controls.append(ft.Text(f"You: {message_input.value}", text_align=ft.TextAlign.RIGHT))
                 message_input.value = ""
-                page.update()
+                await page.update()
 
         content_area.content = ft.Column([
             ft.ElevatedButton("Back to Chats", on_click=go_back),
             messages_list_view,
             ft.Row([message_input, ft.IconButton(icon="send", on_click=send_message_click)])
         ], expand=True)
-        page.update()
+        await page.update()
 
         async for message in client.iter_messages(chat_id, limit=50):
             sender_name = "You" if message.out else (message.sender.first_name if message.sender else "Unknown")
             messages_list_view.controls.insert(0, ft.Text(f"{sender_name}: {message.text}"))
-        page.update()
+        await page.update()
 
     async def show_ad_cabinet_view(content_area):
         accounts = load_accounts()
@@ -390,12 +393,12 @@ async def main(page: ft.Page):
             delay = int(delay_slider.value)
             media_path = selected_file_path.value
 
-            if not all([senders, targets, message]):
-                local_log("Error: Senders, targets, and message are required.")
+            if not all([senders, targets]) or (not message and not media_path):
+                local_log("Error: Senders, targets, and a message or media file are required.")
                 return
 
             e.control.disabled = True
-            page.update()
+            await page.update()
             local_log("====== Ad campaign started ======")
 
             for sender_acc in senders:
@@ -412,9 +415,9 @@ async def main(page: ft.Page):
                         try:
                             local_log(f"    -> Sending to {target} from {phone_display}...")
                             if media_path and os.path.exists(media_path):
-                                await client.send_file(target, file=media_path, caption=message)
+                                await client.send_file(target, file=media_path, caption=message or '')
                                 local_log("    -> Sent with media.")
-                            else:
+                            elif message:
                                 await client.send_message(target, message)
                                 local_log("    -> Sent text only.")
                             local_log(f"    -> Success! Waiting for {delay}s.")
@@ -430,7 +433,7 @@ async def main(page: ft.Page):
 
             local_log("====== All tasks finished ======")
             e.control.disabled = False
-            page.update()
+            await page.update()
 
         content_area.content = ft.Column([
             ft.Text("Ad Cabinet", size=24, weight=ft.FontWeight.BOLD),
@@ -438,9 +441,12 @@ async def main(page: ft.Page):
             ft.Container(content=ft.Column(sender_checkboxes), border=ft.border.all(1, "black26"), padding=10, border_radius=5),
             ft.Text("2. Enter target chats (one per line):"),
             target_chats_field,
-            ft.Text("3. Compose your message:"),
+            ft.Text("3. Compose your message (optional if media is selected):"),
             message_box,
-            ft.Row([ft.ElevatedButton("Select Media", icon="attach_file", on_click=lambda _: file_picker.pick_files()), selected_file_path]),
+            ft.Row([
+                ft.ElevatedButton("Select Media", icon="attach_file", on_click=lambda _: file_picker.pick_files()),
+                selected_file_path
+            ]),
             ft.Text("4. Set delay between messages:"),
             delay_slider,
             ft.ElevatedButton("Start Sending", icon="rocket_launch", on_click=start_sending_click),
@@ -448,7 +454,7 @@ async def main(page: ft.Page):
             ft.Text("Status Log:"),
             ft.Container(content=status_log, expand=True, border=ft.border.all(1, "black26"), padding=10, border_radius=5)
         ], expand=True, scroll=ft.ScrollMode.ADAPTIVE)
-        page.update()
+        await page.update()
 
     async def nav_rail_changed(e):
         idx = e.control.selected_index
