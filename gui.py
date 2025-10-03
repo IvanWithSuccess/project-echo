@@ -46,6 +46,7 @@ async def main(page: ft.Page):
         page.title = "Account Manager"
         accounts = load_accounts()
         account_list_view = ft.ListView(expand=True, spacing=10)
+        status_text = ft.Text()
 
         async def login_and_show_dialogs(account):
             session_name = account['session_name']
@@ -68,37 +69,101 @@ async def main(page: ft.Page):
             account = e.control.data
             await login_and_show_dialogs(account)
 
+        async def edit_notes_clicked(e):
+            account_to_edit = e.control.data
+            notes_textfield = ft.TextField(
+                label="Notes",
+                value=account_to_edit.get("notes", ""),
+                multiline=True,
+                min_lines=3,
+            )
+
+            def close_dialog(e):
+                page.dialog.open = False
+                page.update()
+
+            async def save_notes(e):
+                all_accounts = load_accounts()
+                for acc in all_accounts:
+                    if acc['session_name'] == account_to_edit['session_name']:
+                        acc['notes'] = notes_textfield.value
+                        break
+                save_accounts(all_accounts)
+                page.dialog.open = False
+                page.update()
+                await show_account_manager() # Refresh the list
+
+            page.dialog = ft.AlertDialog(
+                modal=True,
+                title=ft.Text(f"Notes for {account_to_edit.get('phone', account_to_edit['session_name'])}"),
+                content=notes_textfield,
+                actions=[
+                    ft.TextButton("Save", on_click=save_notes),
+                    ft.TextButton("Cancel", on_click=close_dialog),
+                ],
+                actions_alignment=ft.MainAxisAlignment.END,
+            )
+            page.dialog.open = True
+            page.update()
+
         for acc in accounts:
+            # Ensure notes field exists for older accounts
+            if 'notes' not in acc:
+                acc['notes'] = ''
+            
             account_list_view.controls.append(
                 ft.ListTile(
                     leading=ft.Icon("person"),
                     title=ft.Text(acc.get("phone", acc["session_name"])),
-                    subtitle=ft.Text(f"Status: {acc.get('status', 'active')}"),
-                    trailing=ft.ElevatedButton("Login", on_click=login_button_clicked, data=acc)
+                    subtitle=ft.Text(acc.get("notes") or "No notes", italic=True, max_lines=1),
+                    trailing=ft.Row([
+                        ft.ElevatedButton("Login", on_click=login_button_clicked, data=acc),
+                        ft.IconButton(icon="edit", on_click=edit_notes_clicked, data=acc, tooltip="Edit notes")
+                    ])
                 )
             )
-        
-        status_text = ft.Text()
         
         async def add_account_clicked(e):
             await show_login_form()
 
+        async def import_sessions_clicked(e):
+            imported_count = 0
+            existing_accounts = load_accounts()
+            existing_session_names = {acc['session_name'] for acc in existing_accounts}
+
+            for f in os.listdir('.'):
+                if f.endswith('.session'):
+                    session_name = f.replace('.session', '')
+                    if session_name not in existing_session_names:
+                        existing_accounts.append({
+                            "session_name": session_name,
+                            "phone": f"imported_{session_name}",
+                            "status": "imported",
+                            "notes": ""
+                        })
+                        imported_count += 1
+            
+            if imported_count > 0:
+                save_accounts(existing_accounts)
+                status_text.value = f"Successfully imported {imported_count} new session(s)."
+                await show_account_manager() # Reload the view to show imported accounts
+            else:
+                status_text.value = "No new session files found to import."
+            page.update()
+
         page.add(
-            ft.Column(
-                [
-                    ft.Row(
-                        [
-                            ft.Text("Accounts", size=24, weight=ft.FontWeight.BOLD),
-                            ft.ElevatedButton("Add Account", icon="add", on_click=add_account_clicked),
-                        ],
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN
-                    ),
-                    ft.Divider(),
-                    account_list_view,
-                    status_text
-                ],
-                expand=True
-            )
+            ft.Column([
+                ft.Row([
+                    ft.Text("Accounts", size=24, weight=ft.FontWeight.BOLD),
+                    ft.Row([
+                        ft.ElevatedButton("Import Sessions", icon="download", on_click=import_sessions_clicked),
+                        ft.ElevatedButton("Add Account", icon="add", on_click=add_account_clicked)
+                    ])
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Divider(),
+                account_list_view,
+                status_text
+            ], expand=True)
         )
         page.update()
 
@@ -119,12 +184,10 @@ async def main(page: ft.Page):
             
             try:
                 if btn_text == "Get Code":
-                    if not phone:
-                        status_text.value = "Phone number is required."; page.update(); return
-                    
+                    if not phone: status_text.value = "Phone number is required."; page.update(); return
                     accounts = load_accounts()
-                    if any(a['phone'] == phone for a in accounts):
-                        status_text.value = "Account already exists."; page.update(); return
+                    if any(a.get('phone') == phone for a in accounts):
+                        status_text.value = "Account with this phone number already exists."; page.update(); return
 
                     client = TelegramClient(session_name, api_id, api_hash)
                     client_holder["client"] = client
@@ -146,7 +209,7 @@ async def main(page: ft.Page):
                     
                     accounts = load_accounts()
                     if not any(a['session_name'] == session_name for a in accounts):
-                        accounts.append({"session_name": session_name, "phone": phone, "status": "active"})
+                        accounts.append({"session_name": session_name, "phone": phone, "status": "active", "notes": ""})
                         save_accounts(accounts)
 
                     await show_account_manager()
@@ -243,7 +306,6 @@ async def main(page: ft.Page):
         page.title = f"Chat: {chat_name}"
         messages_list_view = ft.ListView(expand=True, spacing=10, auto_scroll=True)
         
-        # Mark chat as read
         await client.send_read_acknowledge(chat_id)
 
         async def on_new_message(event):
