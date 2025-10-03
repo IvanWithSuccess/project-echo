@@ -36,14 +36,10 @@ async def main(page: ft.Page):
     client_holder = {"client": None}
     main_content_area = ft.Container(expand=True)
 
-    # --- Forward declarations for navigation ---
     async def show_account_manager_view():
         await show_account_manager(main_content_area)
 
-    # --- View Implementations --- #
-
     async def show_account_manager(content_area):
-        content_area.controls.clear()
         status_text = ft.Text()
 
         async def login_and_show_dialogs(account):
@@ -98,12 +94,11 @@ async def main(page: ft.Page):
 
         async def add_account_clicked(e):
             await show_login_form(content_area)
-            
+
         async def import_sessions_clicked(e):
             imported_count = 0
             existing_accounts = load_accounts()
             existing_session_names = {acc['session_name'] for acc in existing_accounts}
-
             for f in os.listdir('.'):
                 if f.endswith('.session'):
                     session_name = f.replace('.session', '')
@@ -113,7 +108,6 @@ async def main(page: ft.Page):
                             "status": "imported", "notes": "Imported session", "tags": []
                         })
                         imported_count += 1
-            
             if imported_count > 0:
                 save_accounts(existing_accounts)
                 await show_account_manager_view()
@@ -141,7 +135,7 @@ async def main(page: ft.Page):
                         ft.IconButton(icon="edit_note", on_click=edit_account_clicked, data=acc, tooltip="Edit notes and tags")
                     ], spacing=5)
                 ]),
-                padding=10, border=ft.border.only(bottom=ft.BorderSide(1, ft.colors.BLACK12))
+                padding=10, border=ft.border.only(bottom=ft.BorderSide(1, ft.colors.WHITE_SMOKE))
             ))
 
         content_area.content = ft.Column([
@@ -159,7 +153,6 @@ async def main(page: ft.Page):
         await page.update_async()
 
     async def show_login_form(content_area):
-        content_area.controls.clear()
         phone_field = ft.TextField(label="Phone Number (+1234567890)", width=300)
         code_field = ft.TextField(label="Confirmation Code", width=300, visible=False)
         pw_field = ft.TextField(label="2FA Password", password=True, width=300, visible=False)
@@ -169,7 +162,7 @@ async def main(page: ft.Page):
             phone = phone_field.value.strip()
             session_name = phone.replace('+', '')
             try:
-                if not code_field.visible: # Phase 1: Get Code
+                if not code_field.visible:
                     client = TelegramClient(session_name, api_id, api_hash)
                     client_holder["client"] = client
                     await client.connect()
@@ -178,19 +171,17 @@ async def main(page: ft.Page):
                     code_field.visible = True
                     e.control.text = "Sign In"
                     status.value = "Code sent. Please check Telegram."
-                else: # Phase 2: Sign In
+                else:
                     client = client_holder["client"]
                     if pw_field.visible:
                         await client.sign_in(password=pw_field.value.strip())
                     else:
                         await client.sign_in(phone, code_field.value.strip())
-                    
                     accounts = load_accounts()
                     if not any(a['session_name'] == session_name for a in accounts):
                         accounts.append({"session_name": session_name, "phone": phone, "notes": "", "tags": []})
                         save_accounts(accounts)
                     await show_account_manager_view()
-
             except SessionPasswordNeededError:
                 pw_field.visible = True
                 e.control.text = "Sign In with Password"
@@ -200,19 +191,18 @@ async def main(page: ft.Page):
             await page.update_async()
 
         signin_button = ft.ElevatedButton("Get Code", width=300, on_click=get_code_or_signin)
-        
+
         content_area.content = ft.Column([
             ft.Row([ft.ElevatedButton("Back to Accounts", on_click=lambda e: show_account_manager_view())]),
             ft.Text("Add New Account", size=24),
             phone_field, code_field, pw_field, signin_button, status
         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=20)
         await page.update_async()
-    
+
     async def show_dialogs_view(content_area, client):
-        content_area.controls.clear()
         dialogs_list_view = ft.ListView(expand=True, spacing=10)
         status_text = ft.Text("Loading chats...")
-        
+
         async def on_chat_click(e):
             await show_chat_messages_view(content_area, client, e.control.data['id'], e.control.data['name'])
 
@@ -237,7 +227,6 @@ async def main(page: ft.Page):
                 trailing_widget = None
                 if dialog.unread_count > 0:
                     trailing_widget = ft.CircleAvatar(content=ft.Text(str(dialog.unread_count)), bgcolor=ft.colors.BLUE_400, radius=12)
-
                 list_tile = ft.ListTile(
                     leading=ft.CircleAvatar(content=ft.Text(initials)),
                     title=ft.Text(dialog.name, weight=ft.FontWeight.BOLD),
@@ -252,7 +241,6 @@ async def main(page: ft.Page):
         await page.update_async()
 
     async def show_chat_messages_view(content_area, client, chat_id, chat_name):
-        content_area.controls.clear()
         messages_list_view = ft.ListView(expand=True, spacing=10, auto_scroll=True)
         await client.send_read_acknowledge(chat_id)
 
@@ -260,28 +248,27 @@ async def main(page: ft.Page):
             await show_dialogs_view(content_area, client)
 
         message_input = ft.TextField(hint_text="Type a message...", expand=True)
-        
+
         async def send_message_click(e):
             if message_input.value:
                 await client.send_message(chat_id, message_input.value)
                 messages_list_view.controls.append(ft.Text(f"You: {message_input.value}", text_align=ft.TextAlign.RIGHT))
                 message_input.value = ""
                 await page.update_async()
-        
+
         content_area.content = ft.Column([
             ft.ElevatedButton("Back to Chats", on_click=go_back),
             messages_list_view,
             ft.Row([message_input, ft.IconButton(icon="send", on_click=send_message_click)])
         ], expand=True)
         await page.update_async()
-        
+
         async for message in client.iter_messages(chat_id, limit=50):
             sender_name = "You" if message.out else (message.sender.first_name if message.sender else "Unknown")
             messages_list_view.controls.insert(0, ft.Text(f"{sender_name}: {message.text}"))
         await page.update_async()
 
     async def show_ad_cabinet_view(content_area):
-        content_area.controls.clear()
         accounts = load_accounts()
         sender_checkboxes = [ft.Checkbox(label=acc.get('phone', acc['session_name']), data=acc) for acc in accounts]
         target_chats_field = ft.TextField(label="Target Chats (@username or invite link, one per line)", multiline=True, min_lines=3)
@@ -299,7 +286,7 @@ async def main(page: ft.Page):
                 status_log.controls.append(ft.Text("Error: Senders, targets, and message are required.", color=ft.colors.RED))
                 await page.update_async()
                 return
-            
+
             e.control.disabled = True
             await page.update_async()
 
@@ -354,7 +341,6 @@ async def main(page: ft.Page):
         ], expand=True, scroll=ft.ScrollMode.ADAPTIVE)
         await page.update_async()
 
-    # --- Main Layout & Navigation --- #
     async def nav_rail_changed(e):
         idx = e.control.selected_index
         if idx == 0: await show_account_manager_view()
