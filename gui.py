@@ -69,7 +69,7 @@ async def main(page: ft.Page):
             login_button = ft.ElevatedButton("Login", on_click=login_button_clicked, data=acc)
             account_list_view.controls.append(
                 ft.ListTile(
-                    leading=ft.Icon(ft.icons.PERSON),
+                    leading=ft.Icon("person"),  # Using string name for compatibility
                     title=ft.Text(acc.get("phone", acc["session_name"])),
                     subtitle=ft.Text(f"Status: {acc.get('status', 'unknown')}"),
                     trailing=login_button
