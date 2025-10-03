@@ -74,7 +74,7 @@ async def disconnect_all_clients():
     logging.info("Disconnecting all active clients...")
     sessions = list(active_clients.keys())
     tasks = [disconnect_client(s) for s in sessions]
-    await asyncio.gather(tasks)
+    await asyncio.gather(*tasks)
     logging.info("All clients disconnected.")
 
 # --- Data Persistence --- #
@@ -120,6 +120,19 @@ async def main(page: ft.Page):
         def get_selected_sessions():
             return [c.data['session_name'] for c in account_list_view.controls if c.content.controls[0].value]
 
+        async def delete_single_account(account_to_delete):
+            logging.info(f"Attempting to delete single account: {account_to_delete['session_name']}")
+            all_accounts = load_accounts()
+            accounts_to_keep = [acc for acc in all_accounts if acc['session_name'] != account_to_delete['session_name']]
+            save_accounts(accounts_to_keep)
+            
+            session_file = f"{account_to_delete['session_name']}.session"
+            if os.path.exists(session_file):
+                os.remove(session_file)
+                logging.info(f"Deleted session file: {session_file}")
+            
+            await show_account_manager_view(f"Deleted account: {account_to_delete.get('phone', account_to_delete['session_name'])}")
+
         async def delete_selected_clicked(e):
             sessions_to_delete = get_selected_sessions()
             if not sessions_to_delete:
@@ -139,12 +152,14 @@ async def main(page: ft.Page):
             tags_field = ft.TextField(label="Tags (comma-separated)")
             async def save_tags(e_save):
                 new_tags = {tag.strip() for tag in tags_field.value.split(',') if tag.strip()}
+                logging.info(f"Assigning tags: {new_tags} to sessions: {selected_sessions}")
                 all_accounts = load_accounts()
                 for acc in all_accounts:
                     if acc['session_name'] in selected_sessions:
                         current_tags = set(acc.get('tags', []))
                         current_tags.update(new_tags)
                         acc['tags'] = sorted(list(current_tags))
+                        logging.info(f"Updated tags for {acc['session_name']}: {acc['tags']}")
                 save_accounts(all_accounts)
                 page.dialog.open = False
                 page.update()
@@ -220,7 +235,7 @@ async def main(page: ft.Page):
                         ft.Row([
                             ft.ElevatedButton("Login", on_click=login_and_show_dialogs, data=acc),
                             ft.IconButton(icon="settings", on_click=open_settings_clicked, data=acc, tooltip="Settings"),
-                            ft.IconButton(icon="delete_forever", icon_color="red", on_click=lambda e, acc_data=acc: asyncio.create_task(delete_selected_clicked(e) or show_account_manager_view()), data=acc, tooltip="Delete Account Permanently")
+                            ft.IconButton(icon="delete_forever", icon_color="red", on_click=lambda e: asyncio.create_task(delete_single_account(e.control.data)), data=acc, tooltip="Delete Account Permanently")
                         ], spacing=5)
                     ]),
                     padding=10, border=ft.border.only(bottom=ft.BorderSide(1, "whitesmoke"))
