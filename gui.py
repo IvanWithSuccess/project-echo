@@ -65,9 +65,10 @@ async def main(page: ft.Page):
                 temp_msg = ft.Text(f"{sender_name}: [Downloading photo...]")
                 messages_list_view.controls.append(temp_msg)
                 page.update()
-                file_path = await client.download_media(event.photo, file="downloads/")
+                relative_path = await client.download_media(event.photo, file="downloads/")
+                absolute_path = os.path.abspath(relative_path)
                 messages_list_view.controls.remove(temp_msg)
-                messages_list_view.controls.append(ft.Column([ft.Text(sender_name), ft.Image(src=file_path, height=200)]))
+                messages_list_view.controls.append(ft.Column([ft.Text(sender_name), ft.Image(src=absolute_path, height=200)]))
             elif event.text:
                 messages_list_view.controls.append(ft.Text(f"{sender_name}: {event.text}"))
             
@@ -119,8 +120,10 @@ async def main(page: ft.Page):
                 sender = await message.get_sender()
                 sender_name = "You" if message.out else (sender.first_name if hasattr(sender, 'first_name') else "Unknown")
                 if message.photo:
-                    file_path = await client.download_media(message.photo, file="downloads/")
-                    messages.append(ft.Column([ft.Text(sender_name), ft.Image(src=file_path, height=200)]))
+                    relative_path = await client.download_media(message.photo, file="downloads/")
+                    if relative_path:
+                        absolute_path = os.path.abspath(relative_path)
+                        messages.append(ft.Column([ft.Text(sender_name), ft.Image(src=absolute_path, height=200)]))
                 elif message.text:
                     messages.append(ft.Text(f"{sender_name}: {message.text}"))
             messages.reverse()
@@ -154,11 +157,12 @@ async def main(page: ft.Page):
             page.update()
             try:
                 async for dialog in client.iter_dialogs():
-                    avatar_path = await client.download_profile_photo(dialog.entity, file=f"downloads/avatars/{dialog.id}.jpg")
+                    relative_avatar_path = await client.download_profile_photo(dialog.entity, file=f"downloads/avatars/{dialog.id}.jpg")
                     
                     leading_avatar = None
-                    if avatar_path:
-                        leading_avatar = ft.CircleAvatar(background_image_src=avatar_path)
+                    if relative_avatar_path:
+                        absolute_avatar_path = os.path.abspath(relative_avatar_path)
+                        leading_avatar = ft.CircleAvatar(background_image_src=absolute_avatar_path)
                     else:
                         initials = "".join([p[0] for p in dialog.name.split()[:2]]).upper()
                         leading_avatar = ft.CircleAvatar(content=ft.Text(initials), bgcolor=random.choice(colors_for_avatars))
