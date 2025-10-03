@@ -186,14 +186,15 @@ async def main(page: ft.Page):
         async def update_avatar(dialog, list_tile):
             if not client_holder["client"] or not client_holder["client"].is_connected(): return
             path = f"downloads/avatars/{dialog.id}.jpg"
+            relative_path = path
             if not os.path.exists(path):
               relative_path = await client.download_profile_photo(dialog.entity, file=path)
-            else:
-              relative_path = path
+            
             if relative_path:
-                list_tile.leading.content = None # Remove initials
+                list_tile.leading.content = None
                 list_tile.leading.background_image_src = os.path.abspath(relative_path)
-                page.update()
+                if page.client_storage.get(f"chat_list_tile_{dialog.id}"):
+                     page.update()
 
         async def on_chat_click(e):
             await show_chat_messages(client, e.control.data['id'], e.control.data['name'])
@@ -215,7 +216,7 @@ async def main(page: ft.Page):
 
                     trailing_widget = None
                     if dialog.unread_count > 0:
-                        trailing_widget = ft.CircleAvatar(content=ft.Text(str(dialog.unread_count)), bgcolor="blue400", radius=12) # Use string for color
+                        trailing_widget = ft.CircleAvatar(content=ft.Text(str(dialog.unread_count)), bgcolor="blue400", radius=12)
                     
                     list_tile = ft.ListTile(
                         leading=leading_avatar, 
@@ -226,6 +227,7 @@ async def main(page: ft.Page):
                         on_click=on_chat_click)
                     
                     new_controls.append(list_tile)
+                    page.client_storage.set(f"chat_list_tile_{dialog.id}", True)
                     asyncio.create_task(update_avatar(dialog, list_tile))
 
                 dialogs_list_view.controls = new_controls
@@ -242,6 +244,9 @@ async def main(page: ft.Page):
         page.clean()
         page.title = f"Chat: {chat_name}"
         messages_list_view = ft.ListView(expand=True, spacing=10, auto_scroll=True)
+        
+        # Mark chat as read
+        await client.send_read_acknowledge(chat_id)
 
         async def on_new_message(event):
             sender = await event.get_sender()
@@ -271,7 +276,6 @@ async def main(page: ft.Page):
             if e.files:
                 picked_file = e.files[0]
                 await client.send_file(chat_id, picked_file.path)
-                # Show sent image
                 sent_image_col = ft.Column([
                     ft.Text("You:", weight=ft.FontWeight.BOLD),
                     ft.Image(src=picked_file.path, height=200)
@@ -281,6 +285,7 @@ async def main(page: ft.Page):
 
         file_picker = ft.FilePicker(on_result=send_file_result)
         page.overlay.append(file_picker)
+        page.update() # IMPORTANT: Update page to register the file picker
 
         back_button = ft.ElevatedButton("Back to Chats", on_click=go_back)
         message_input = ft.TextField(hint_text="Type a message...", expand=True)
@@ -305,10 +310,12 @@ async def main(page: ft.Page):
                 
                 content_control = None
                 if message.photo:
-                    path = f"downloads/media/{message.photo.id}.jpg"
+                    path = f"downloads/media/{message.id}.jpg"
+                    # Check if file exists to avoid re-downloading
                     if not os.path.exists(path):
                         path = await client.download_media(message, file=path)
-                    content_control = ft.Image(src=os.path.abspath(path), height=200)
+                    if path: # Ensure download was successful
+                        content_control = ft.Image(src=os.path.abspath(path), height=200)
                 elif message.text:
                     content_control = ft.Text(message.text)
                 
