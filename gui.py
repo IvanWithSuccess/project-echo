@@ -20,10 +20,13 @@ async def main(page: ft.Page):
         page.clean()
         page.title = f"Chat: {chat_name}"
 
-        messages_list_view = ft.ListView(expand=True, spacing=10, auto_scroll=True, follow=True)
+        messages_list_view = ft.ListView(expand=True, spacing=10, auto_scroll=True)
 
         # Handler for new messages (both incoming and outgoing)
         async def on_new_message(event):
+            # Ignore messages without text
+            if not event.text:
+                return
             sender = await event.get_sender()
             sender_name = sender.first_name if hasattr(sender, 'first_name') else "You" # Simplified sender logic
             messages_list_view.controls.append(ft.Text(f"{sender_name}: {event.text}"))
@@ -61,9 +64,11 @@ async def main(page: ft.Page):
         try:
             messages = []
             async for message in client.iter_messages(chat_id, limit=50):
-                sender = await message.get_sender()
-                sender_name = sender.first_name if hasattr(sender, 'first_name') else "You"
-                messages.append(ft.Text(f"{sender_name}: {message.text}"))
+                # Only display messages with text
+                if message and message.text:
+                    sender = await message.get_sender()
+                    sender_name = "You" if message.out else (sender.first_name if hasattr(sender, 'first_name') else "Unknown")
+                    messages.append(ft.Text(f"{sender_name}: {message.text}"))
             
             messages.reverse()
             messages_list_view.controls.extend(messages)
@@ -93,12 +98,14 @@ async def main(page: ft.Page):
         try:
             async for dialog in client.iter_dialogs():
                 subtitle_text = ""
-                if dialog.message:
+                if dialog.message and dialog.message.text:
                     if dialog.message.out:
                         subtitle_text = f"You: {dialog.message.text}"
                     else:
                         subtitle_text = dialog.message.text
-                
+                else:
+                    subtitle_text = "[Media or service message]"
+
                 trailing_widget = None
                 if dialog.unread_count > 0:
                     trailing_widget = ft.CircleAvatar(
