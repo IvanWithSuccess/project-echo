@@ -29,35 +29,45 @@ th, td { padding: 12px; border: 1px solid #ddd; text-align: left; }
 tr:nth-child(even) { background-color: #f9f9f9; }
 .tag { background-color: #3498db; color: white; padding: 3px 8px; border-radius: 10px; font-size: 0.8em; margin-right: 5px; }
 
-/* --- Account Settings Page --- */
-.settings-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 20px; }
-.settings-header h1 { margin: 0; }
-
+/* --- Tabs --- */
 .tab-bar { border-bottom: 1px solid #ccc; padding-bottom: -1px; margin-bottom: 20px; }
 .tab-link { background-color: transparent; border: 1px solid transparent; border-bottom: none; padding: 10px 15px; cursor: pointer; font-size: 1em; color: #333; border-radius: 5px 5px 0 0; }
 .tab-link.active { background-color: #fff; border-color: #ccc; border-bottom-color: #fff; transform: translateY(1px); }
+.tab-content, .resource-tab-content { display: none; background: #fff; padding: 20px; border: 1px solid #ccc; border-top: none; border-radius: 0 0 5px 5px; }
+.tab-content.active, .resource-tab-content.active { display: block; }
 
-.tab-content { display: none; background: #fff; padding: 20px; border: 1px solid #ccc; border-top: none; border-radius: 0 0 5px 5px; }
-.tab-content.active { display: block; }
-
-.form-section { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+/* --- Forms & Grids --- */
+.form-section { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; background: #fff; padding: 20px; border-radius: 5px; border: 1px solid #ddd; }
 .form-section:last-child { border-bottom: none; }
-
 .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.form-grid-3 { display: grid; grid-template-columns: 1fr 1fr auto; gap: 20px; align-items: end; }
+.form-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.generate-btn, .check-btn { padding: 8px 15px; }
+.check-btn { background-color: #3498db; }
+.check-btn:hover { background-color: #2980b9; }
+
+/* --- Account Settings Page --- */
+.settings-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 20px; }
+.settings-header h1 { margin: 0; }
 
 /* Profile Settings Specifics */
 .profile-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; align-items: start; }
 .profile-fields { display: flex; flex-direction: column; }
 .avatar-section { text-align: center; }
-#avatar-preview { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #ecf0f1; object-fit: cover; margin-bottom: 15px; }
+#avatar-preview { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #ecf0f1; object-fit: cover; margin-bottom: 15px; background-color: #e9ecef; }
 .avatar-section button { width: 100%; }
 
 .settings-footer { margin-top: 20px; text-align: right; }
+
+/* --- Resources Page --- */
+#tags-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.tag-item { background: #e9ecef; padding: 10px; border-radius: 5px; display: flex; align-items: center; gap: 10px; }
+.tag-item button { background: none; border: none; color: #e74c3c; font-size: 1.2em; cursor: pointer; }
 
 /* Responsive */
 @media (max-width: 900px) {
     .profile-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 768px) {
-    .form-grid-2 { grid-template-columns: 1fr; }
+    .form-grid-2, .form-grid-3, .form-grid-4 { grid-template-columns: 1fr; }
 }

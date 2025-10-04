@@ -1,6 +1,7 @@
 
 import logging
 import os
+import asyncio
 from telethon import TelegramClient, functions, types
 from telethon.tl.functions.account import UpdateProfileRequest
 from telethon.tl.functions.photos import UploadProfilePhotoRequest
@@ -20,9 +21,9 @@ class TelegramService:
         self.api_id = api_id
         self.api_hash = api_hash
         self.session_name = phone.replace('+', '')
+        self.proxy = proxy
         session_path = os.path.join(SESSIONS_DIR, self.session_name)
         
-        # Telethon recommends proxy to be a dict or a tuple
         proxy_formatted = None
         if proxy and proxy.get('host') and proxy.get('port'):
             proxy_formatted = (proxy['type'], proxy['host'], proxy['port'], True, proxy.get('user'), proxy.get('pass'))
@@ -30,6 +31,22 @@ class TelegramService:
         self.client = TelegramClient(session_path, self.api_id, self.api_hash,
                                    system_version=system_version or '4.16.30-vxCUSTOM',
                                    proxy=proxy_formatted)
+
+    async def check_proxy(self) -> bool:
+        """
+        Attempts to connect to Telegram using the configured proxy to check if it's working.
+        """
+        logging.info(f"[{self.session_name}] Attempting connection via proxy...")
+        try:
+            await asyncio.wait_for(self.client.connect(), timeout=10)
+            logging.info(f"[{self.session_name}] Proxy connection successful.")
+            return True
+        except Exception as e:
+            logging.error(f"[{self.session_name}] Proxy connection failed: {e}")
+            return False
+        finally:
+            if self.client.is_connected():
+                await self.client.disconnect()
 
     async def start_login(self) -> (str, str | None):
         logging.info(f"[{self.session_name}] Connecting for login...")
@@ -46,8 +63,8 @@ class TelegramService:
                 status = 'CODE_SENT'
             except Exception as e:
                 logging.error(f"[{self.session_name}] Failed to send code: {e}")
-                status = str(e) # Status now contains the error
-                phone_code_hash = None # Hash is correctly None on error
+                status = str(e)
+                phone_code_hash = None
         await self.client.disconnect()
         return status, phone_code_hash
 
