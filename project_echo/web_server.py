@@ -3,7 +3,7 @@ from flask import Flask, render_template, jsonify, request
 import json
 import os
 import asyncio
-from project_echo.telegram_service import TelegramService
+from project_echo.services.telegram_service import TelegramService
 
 ACCOUNTS_FILE = "accounts.json"
 
