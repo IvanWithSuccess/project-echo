@@ -22,7 +22,7 @@ class AdCabinetView(toga.Box):
         refresh_button = toga.Button('Refresh Accounts', on_press=self.populate_account_selector, style=Pack(margin_left=10))
         
         # Use margin_bottom and margin_right instead of padding
-        top_box = toga.Box(style=Pack(direction=ROW, margin_bottom=10, alignment='center'))
+        top_box = toga.Box(style=Pack(direction=ROW, margin_bottom=10, align_items='center'))
         top_box.add(toga.Label('Select Account:', style=Pack(margin_right=10)))
         top_box.add(self.account_selector)
         top_box.add(refresh_button)
