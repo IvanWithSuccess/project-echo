@@ -21,21 +21,15 @@ function loadAccounts() {
 }
 
 function addAccount() {
-    // Prompt for user details
+    // Only prompt for the phone number
     const phone = prompt("Enter phone number (e.g., +1234567890):");
     if (!phone) return;
 
-    const api_id = prompt("Enter your API ID:");
-    if (!api_id) return;
-
-    const api_hash = prompt("Enter your API Hash:");
-    if (!api_hash) return;
-
-    // Send initial request
+    // Send initial request with just the phone number
     fetch('/api/accounts/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, api_id, api_hash })
+        body: JSON.stringify({ phone })
     })
     .then(response => response.json())
     .then(data => {
@@ -82,4 +76,3 @@ function finalizeConnection(phone, code, password) {
         alert('An unexpected error occurred. Check the console for details.');
     });
 }
-

@@ -5,6 +5,10 @@ import os
 import asyncio
 from project_echo.services.telegram_service import TelegramService
 
+# --- Hardcoded Credentials ---
+# These are for development convenience and should be moved to a secure config later.
+API_ID = "26947469"
+API_HASH = "731a222f9dd8b290db925a6a382159dd"
 ACCOUNTS_FILE = "accounts.json"
 
 # Initialize the Flask app and the Telegram service
@@ -39,15 +43,13 @@ def add_account():
     """API endpoint to add a new Telegram account."""
     data = request.json
     phone = data.get('phone')
-    api_id = data.get('api_id')
-    api_hash = data.get('api_hash')
 
-    if not all([phone, api_id, api_hash]):
-        return jsonify({'status': 'error', 'message': 'Missing required fields.'}), 400
+    if not phone:
+        return jsonify({'status': 'error', 'message': 'Phone number is required.'}), 400
 
     try:
-        # Since Flask runs in a sync context, we need to run the async code in a new event loop
-        result = asyncio.run(telegram_service.add_account_interactive(phone, api_id, api_hash))
+        # Use hardcoded API credentials
+        result = asyncio.run(telegram_service.add_account_interactive(phone, API_ID, API_HASH))
         return jsonify(result)
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
@@ -72,4 +74,3 @@ def finalize_account():
 def index():
     """Serves the main HTML page."""
     return render_template('index.html')
-
