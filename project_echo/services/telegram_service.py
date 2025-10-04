@@ -21,6 +21,12 @@ class TelegramService:
         self.client = TelegramClient(session_path, API_ID, API_HASH)
         self.phone_code_hash = None
 
+    async def disconnect(self):
+        if self.client.is_connected():
+            logging.info(f'[{self.session_name}] Disconnecting...')
+            await self.client.disconnect()
+            logging.info(f'[{self.session_name}] Disconnection complete!')
+
     async def start_login(self):
         logging.info(f'[{self.session_name}] Connecting...')
         await self.client.connect()
@@ -32,44 +38,36 @@ class TelegramService:
                 return True
             except Exception as e:
                 logging.error(f'[{self.session_name}] Failed to send code: {e}')
-                await self.client.disconnect()
+                await self.disconnect() # Disconnect on failure
                 return False
         else:
             logging.info(f'[{self.session_name}] Already authorized.')
-            await self.client.disconnect()
             return True
 
     async def submit_code(self, code):
         logging.info(f'[{self.session_name}] Submitting code...')
         try:
             await self.client.sign_in(self.session_name, code, phone_code_hash=self.phone_code_hash)
-            logging.info(f'[{self.session_name}] Sign in successful (no 2FA).')
             return 'SUCCESS'
         except SessionPasswordNeededError:
             logging.info(f'[{self.session_name}] Password needed.')
             return 'PASSWORD_NEEDED'
         except Exception as e:
             logging.error(f'[{self.session_name}] Code submission error: {e}')
-            await self.client.disconnect()
             return str(e)
 
     async def submit_password(self, password):
         logging.info(f'[{self.session_name}] Submitting password...')
         try:
             await self.client.sign_in(password=password)
-            logging.info(f'[{self.session_name}] 2FA Sign in successful.')
             return 'SUCCESS'
         except Exception as e:
             logging.error(f'[{self.session_name}] Password submission error: {e}')
-            await self.client.disconnect()
             return str(e)
 
     async def get_me(self):
         if not self.client.is_connected():
             await self.client.connect()
         if await self.client.is_user_authorized():
-            me = await self.client.get_me()
-            await self.client.disconnect()
-            return me
-        await self.client.disconnect()
+            return await self.client.get_me()
         return None
