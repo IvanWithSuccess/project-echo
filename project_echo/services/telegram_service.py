@@ -25,9 +25,6 @@ class TelegramService:
         self.client = TelegramClient(session_path, self.api_id, self.api_hash)
 
     async def start_login(self) -> (str, str | None):
-        """
-        Connects, starts the login process, and returns the status and phone_code_hash.
-        """
         logging.info(f"[{self.session_name}] Connecting for login...")
         await self.client.connect()
         
@@ -52,9 +49,6 @@ class TelegramService:
         return status, phone_code_hash
 
     async def submit_code(self, code: str, phone_code_hash: str) -> str:
-        """
-        Connects, submits the verification code, and returns the result.
-        """
         logging.info(f"[{self.session_name}] Connecting to submit code...")
         await self.client.connect()
         status = ''
@@ -68,7 +62,6 @@ class TelegramService:
             logging.error(f"[{self.session_name}] Code submission error: {e}")
             status = str(e)
         
-        # Don't disconnect if password is needed, we'll use the same connection
         if status != 'PASSWORD_NEEDED':
             logging.info(f"[{self.session_name}] Disconnecting after code submission.")
             await self.client.disconnect()
@@ -76,9 +69,6 @@ class TelegramService:
         return status
 
     async def submit_password(self, password: str) -> str:
-        """
-        Connects (or uses existing connection), submits the 2FA password, and returns the result.
-        """
         if not self.client.is_connected():
             logging.info(f"[{self.session_name}] Connecting to submit password...")
             await self.client.connect()
@@ -96,9 +86,6 @@ class TelegramService:
         return status
 
     async def get_me(self):
-        """
-        Connects, gets user info, and disconnects.
-        """
         logging.info(f"[{self.session_name}] Connecting to get user info...")
         await self.client.connect()
         user = None
@@ -108,3 +95,40 @@ class TelegramService:
         logging.info(f"[{self.session_name}] Disconnecting after getting user info.")
         await self.client.disconnect()
         return user
+
+    async def get_chat_participants(self, chat_link: str) -> (str, list):
+        """
+        Connects, scrapes participants from a given chat, and returns them.
+        """
+        logging.info(f"[{self.session_name}] Connecting to scrape chat: {chat_link}")
+        await self.client.connect()
+        
+        users = []
+        status = ""
+        try:
+            if not await self.client.is_user_authorized():
+                raise Exception("Client not authorized. Please re-login.")
+
+            entity = await self.client.get_entity(chat_link)
+            logging.info(f"[{self.session_name}] Scraping participants from: {entity.title}")
+            
+            async for user in self.client.iter_participants(entity, limit=None): # No limit
+                if not user.bot and not user.deleted:
+                    users.append({
+                        "id": user.id,
+                        "username": user.username,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name
+                    })
+            status = "SUCCESS"
+            logging.info(f"[{self.session_name}] Found {len(users)} valid participants.")
+
+        except Exception as e:
+            logging.error(f"[{self.session_name}] Failed to scrape participants: {e}")
+            status = str(e)
+        
+        finally:
+            logging.info(f"[{self.session_name}] Disconnecting after scraping.")
+            await self.client.disconnect()
+
+        return status, users

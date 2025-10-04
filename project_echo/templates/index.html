@@ -1,33 +1,57 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Echo</title>
-    <!-- We will add CSS later -->
 </head>
 <body>
-    <h1>Project Echo</h1>
-    
-    <div id="accounts-section">
-        <h2>Telegram Accounts</h2>
-        <table border="1">
-            <thead>
-                <tr>
-                    <th>Phone</th>
-                    <th>Username</th>
-                </tr>
-            </thead>
-            <tbody id="accounts-table-body">
-                <!-- Accounts will be loaded here by JavaScript -->
-            </tbody>
-        </table>
-        <br>
-        <button onclick="addAccount()">Add Account</button>
+    <h1>Telegram Accounts</h1>
+    <button onclick="addAccount()">Add Account</button>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Phone</th>
+                <th>Username</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="accounts-table-body">
+            <!-- Accounts will be loaded here -->
+        </tbody>
+    </table>
+
+    <hr>
+
+    <h2>Audience Scraper</h2>
+    <div>
+        <label for="scraper-account">Select Account to Use:</label>
+        <select id="scraper-account">
+            <!-- Account options will be loaded here -->
+        </select>
+        <br><br>
+        <label for="chat-link">Target Chat/Channel Link or Username:</label>
+        <input type="text" id="chat-link" placeholder="@channel_name or https://t.me/...">
+        <br><br>
+        <button onclick="scrapeAudience()">Start Scraping</button>
+        <p id="scraper-status"></p>
     </div>
 
-    <!-- We will add JavaScript later -->
+    <h3>Scraped Users</h3>
+    <button onclick="saveAudience()" id="save-audience-btn" style="display:none;">Save Audience</button>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>User ID</th>
+                <th>Username</th>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody id="audience-table-body">
+            <!-- Scraped users will be loaded here -->
+        </tbody>
+    </table>
+
     <script src="/static/app.js"></script>
 </body>
 </html>
