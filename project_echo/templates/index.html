@@ -37,10 +37,9 @@
 
         <!-- Audience CRM Section -->
         <div id="audiences" class="content-section">
-            <h1>Audience CRM</h1>
+             <h1>Audience CRM</h1>
             <div class="container">
                 <h3>Scrape New Audience</h3>
-                <p>Select an account and provide a public chat link to start scraping.</p>
                 <select id="scraper-account"></select>
                 <input type="text" id="chat-link" placeholder="Enter public chat link (e.g., https://t.me/somegroup)">
                 <button onclick="scrapeAudience()">Scrape Audience</button>
@@ -76,71 +75,80 @@
                 <button onclick="toggleCampaignForm(false)">Cancel</button>
             </div>
         </div>
-        
-        <!-- Task Center Section -->
-        <div id="tasks" class="content-section">
-            <h1>Task Center</h1>
-            <p>Coming Soon: Automated account warming, scheduled posts, and more.</p>
-        </div>
-        
-        <!-- Settings Section -->
-        <div id="settings" class="content-section">
-            <h1>Settings</h1>
-            <p>Global settings for Project Echo will be here.</p>
-        </div>
-    </div>
 
-    <!-- Account Settings Modal (used by Accounts page) -->
-    <div id="account-settings-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeAccountSettingsModal()">&times;</span>
-            <h3 id="settings-modal-title">Account Settings</h3>
+        <!-- Account Settings Page -->
+        <div id="account-settings" class="content-section">
+            <div class="settings-header">
+                <h1>Account Settings: <span id="settings-account-display-phone"></span></h1>
+                <button onclick="showMainAccountsPage()">&#8592; Back to Accounts</button>
+            </div>
             <input type="hidden" id="settings-account-phone">
-            
-            <div class="form-section">
-                <h4>Profile Settings</h4>
-                <div class="form-grid-2">
-                    <div><label>First Name</label><input type="text" id="account-first-name"></div>
-                    <div><label>Last Name</label><input type="text" id="account-last-name"></div>
+
+            <div class="tab-bar">
+                <button class="tab-link active" onclick="openSettingsTab(event, 'main-settings')">Main</button>
+                <button class="tab-link" onclick="openSettingsTab(event, 'proxy-settings')">Proxy</button>
+                <button class="tab-link" onclick="openSettingsTab(event, 'tags-settings')">Tags</button>
+            </div>
+
+            <!-- Main Settings Tab -->
+            <div id="main-settings" class="tab-content active">
+                <div class="form-section">
+                    <h4>Profile</h4>
+                    <div class="form-grid-2">
+                        <div><label>First Name</label><input type="text" id="account-first-name"></div>
+                        <div><label>Last Name</label><input type="text" id="account-last-name"></div>
+                    </div>
+                    <label>Bio (About)</label>
+                    <textarea id="account-bio" rows="3"></textarea>
+                    <label>Avatar Path (temp)</label>
+                    <input type="text" id="account-avatar-path" placeholder="e.g., uploads/avatar1.jpg">
+                    <button class="action-btn" onclick="applyProfileChanges()">Apply Profile Changes</button>
                 </div>
-                <label>Bio (About)</label>
-                <textarea id="account-bio" rows="3"></textarea>
-                <label>Avatar Path</label>
-                <input type="text" id="account-avatar-path" placeholder="e.g., uploads/avatar1.jpg">
-                <p><i>Place images in the 'uploads' folder on the server.</i></p>
-                <button class="action-btn" onclick="applyProfileChanges()">Apply Profile Changes to Telegram</button>
-            </div>
-
-            <div class="form-section">
-                <h4>Manage Tags</h4>
-                <input type="text" id="account-tags-input" placeholder="e.g., primary, test, warm-up">
-                <p><i>Separate tags with commas.</i></p>
-            </div>
-
-            <div class="form-section">
-                <h4>Connection Settings</h4>
-                <label>User-Agent (System Version)</label>
-                <input type="text" id="account-user-agent-input" placeholder="e.g., 4.16.30-vxCUSTOM">
-                
-                <label>Proxy Type</label>
-                <select id="account-proxy-type">
-                    <option value="socks5">SOCKS5</option>
-                    <option value="http">HTTP</option>
-                </select>
-
-                <div class="form-grid-2">
-                    <div><label>Proxy Host</label><input type="text" id="account-proxy-host" placeholder="127.0.0.1"></div>
-                    <div><label>Proxy Port</label><input type="text" id="account-proxy-port" placeholder="1080"></div>
-                    <div><label>Proxy Username</label><input type="text" id="account-proxy-user"></div>
-                    <div><label>Proxy Password</label><input type="password" id="account-proxy-pass"></div>
+                <div class="form-section">
+                    <h4>Connection</h4>
+                    <label>User-Agent (System Version)</label>
+                    <input type="text" id="account-user-agent-input" placeholder="e.g., 4.16.30-vxCUSTOM">
                 </div>
-                 <p><i>Leave proxy fields blank to disable.</i></p>
             </div>
-            
-            <button onclick="saveAccountSettings()">Save Settings to JSON</button>
+
+            <!-- Proxy Settings Tab -->
+            <div id="proxy-settings" class="tab-content">
+                <div class="form-section">
+                     <h4>Proxy Settings</h4>
+                     <p><i>Leave fields blank to disable proxy.</i></p>
+                    <label>Proxy Type</label>
+                    <select id="account-proxy-type">
+                        <option value="socks5">SOCKS5</option>
+                        <option value="http">HTTP</option>
+                    </select>
+                    <div class="form-grid-2">
+                        <div><label>Proxy Host</label><input type="text" id="account-proxy-host" placeholder="127.0.0.1"></div>
+                        <div><label>Proxy Port</label><input type="text" id="account-proxy-port" placeholder="1080"></div>
+                        <div><label>Proxy Username</label><input type="text" id="account-proxy-user"></div>
+                        <div><label>Proxy Password</label><input type="password" id="account-proxy-pass"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tags Settings Tab -->
+            <div id="tags-settings" class="tab-content">
+                 <div class="form-section">
+                    <h4>Manage Tags</h4>
+                    <input type="text" id="account-tags-input" placeholder="e.g., primary, test, warm-up">
+                    <p><i>Separate tags with commas.</i></p>
+                </div>
+            </div>
+
+            <div class="settings-footer">
+                 <button onclick="saveAccountSettings()">Save Settings</button>
+            </div>
         </div>
-    </div>
 
+        <!-- Other Sections -->
+        <div id="tasks" class="content-section"><p>Task Center - Coming Soon</p></div>
+        <div id="settings" class="content-section"><p>Settings - Coming Soon</p></div>
+    </div>
+    
     <script src="/static/app.js"></script>
 </body>
 </html>

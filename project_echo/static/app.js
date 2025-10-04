@@ -4,13 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     switchSection('dashboard');
 });
 
-window.onclick = function(event) {
-    const modal = document.getElementById("account-settings-modal");
-    if (event.target == modal) {
-        closeAccountSettingsModal();
-    }
-}
-
+// --- Page & Section Navigation ---
 function switchSection(sectionId) {
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.sidebar nav li').forEach(i => i.classList.remove('active'));
@@ -21,16 +15,46 @@ function switchSection(sectionId) {
     if (sectionId === 'accounts') loadAccounts();
     if (sectionId === 'audiences') { loadAccounts(); loadAndDisplayAudiences(); }
     if (sectionId === 'campaigns') { loadCampaigns(); loadAccountsForCampaign(); loadAndDisplayAudiences(); }
+    
+    // If we are switching to any main section, ensure the specific account settings page is hidden
+    if (['dashboard', 'accounts', 'audiences', 'campaigns', 'tasks', 'settings'].includes(sectionId)) {
+         document.getElementById('account-settings').style.display = 'none';
+         document.getElementById('accounts').style.display = (sectionId === 'accounts') ? 'block' : 'none';
+    }
 }
+
+function showAccountSettingsPage(account) {
+    // Hide the main accounts list and show the settings page
+    document.getElementById('accounts').style.display = 'none';
+    document.getElementById('account-settings').style.display = 'block';
+    document.getElementById('account-settings').classList.add('active'); // Make it the active section
+
+    // Populate data
+    openAccountSettings(account);
+}
+
+function showMainAccountsPage() {
+    // Hide settings, show main accounts list
+    document.getElementById('account-settings').style.display = 'none';
+    document.getElementById('account-settings').classList.remove('active');
+    document.getElementById('accounts').style.display = 'block';
+    switchSection('accounts'); // Re-run switchSection to fix nav and load accounts
+}
+
+function openSettingsTab(evt, tabName) {
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    document.querySelectorAll('.tab-link').forEach(tl => tl.classList.remove('active'));
+    document.getElementById(tabName).classList.add('active');
+    evt.currentTarget.classList.add('active');
+}
+
 
 // --- Accounts Management ---
 function loadAccounts() {
     fetch('/api/accounts').then(r => r.json()).then(data => {
         const tableBody = document.getElementById('accounts-table-body');
-        const scraperSelect = document.getElementById('scraper-account');
+        if (!tableBody) return;
         tableBody.innerHTML = '';
-        scraperSelect.innerHTML = '<option disabled selected>Select an account</option>';
-        
         data.forEach(acc => {
             const tagsHtml = (acc.settings?.tags || []).map(tag => `<span class="tag">${tag}</span>`).join(' ');
             tableBody.innerHTML += `
@@ -39,59 +63,77 @@ function loadAccounts() {
                     <td>${acc.username || 'N/A'}</td>
                     <td>${tagsHtml}</td>
                     <td>
-                        <button onclick='openAccountSettingsModal(${JSON.stringify(acc)})'>Settings</button>
+                        <button onclick='showAccountSettingsPage(${JSON.stringify(acc)})'>Settings</button>
                         <button class="delete-btn" onclick="deleteAccount('${acc.phone}')">Delete</button>
                     </td>
                 </tr>`;
-
-            scraperSelect.innerHTML += `<option value="${acc.phone}">${acc.phone} (${acc.username || 'N/A'})</option>`;
         });
     }).catch(e => console.error('Error loading accounts:', e));
 }
 
 function addAccount() {
-    // ... (unchanged)
+    const phone = prompt("Enter phone number (e.g., +1234567890):");
+    if (!phone) return;
+    fetch('/api/accounts/add', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone})})
+    .then(r => r.json()).then(data => {
+        if (data.message.includes('Verification code sent')) {
+            const code = prompt("Enter verification code:");
+            if (code) finalizeLogin(phone, code);
+        } else if (data.message.includes('password required')) {
+            const password = prompt("Enter 2FA password:");
+            if (password) finalizeLogin(phone, null, password);
+        }
+        alert(data.message);
+        loadAccounts();
+    });
 }
 
 function finalizeLogin(phone, code, password = null) {
-    // ... (unchanged)
+    fetch('/api/accounts/finalize', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,code,password})})
+    .then(r => r.json()).then(data => {
+        if (data.message.includes('password required')) {
+            const new_password = prompt("2FA password required:");
+            if (new_password) finalizeLogin(phone, null, new_password);
+        } else {
+            alert(data.message); loadAccounts();
+        }
+    });
 }
 
 function deleteAccount(phone) {
-    // ... (unchanged)
+    if (!confirm(`Are you sure you want to delete account ${phone}? This action is irreversible.`)) return;
+    fetch('/api/accounts/delete', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone})})
+    .then(r=>r.json()).then(data=>{alert(data.message); loadAccounts();});
 }
 
-// --- Account Settings Modal ---
-function openAccountSettingsModal(account) {
+// --- Account Settings Page ---
+function openAccountSettings(account) {
     document.getElementById('settings-account-phone').value = account.phone;
-    document.getElementById('settings-modal-title').innerText = `Settings for ${account.phone}`;
+    document.getElementById('settings-account-display-phone').innerText = account.phone;
     
     const settings = account.settings || {};
     const profile = settings.profile || {};
     const proxy = settings.proxy || {};
 
-    // Profile
+    // Main Tab
     document.getElementById('account-first-name').value = profile.first_name || '';
     document.getElementById('account-last-name').value = profile.last_name || '';
     document.getElementById('account-bio').value = profile.bio || '';
     document.getElementById('account-avatar-path').value = profile.avatar_path || '';
-
-    // Tags
-    document.getElementById('account-tags-input').value = (settings.tags || []).join(', ');
-
-    // User-Agent & Proxy
     document.getElementById('account-user-agent-input').value = settings.system_version || '';
+
+    // Proxy Tab
     document.getElementById('account-proxy-type').value = proxy.type || 'socks5';
     document.getElementById('account-proxy-host').value = proxy.host || '';
     document.getElementById('account-proxy-port').value = proxy.port || '';
     document.getElementById('account-proxy-user').value = proxy.user || '';
     document.getElementById('account-proxy-pass').value = proxy.pass || '';
 
-    document.getElementById('account-settings-modal').style.display = 'block';
-}
-
-function closeAccountSettingsModal() {
-    document.getElementById('account-settings-modal').style.display = 'none';
+    // Tags Tab
+    document.getElementById('account-tags-input').value = (settings.tags || []).join(', ');
+    
+    // Set first tab as active
+    openSettingsTab({currentTarget: document.querySelector('.tab-link')}, 'main-settings');
 }
 
 function saveAccountSettings() {
@@ -125,8 +167,7 @@ function saveAccountSettings() {
     })
     .then(r => r.json()).then(data => {
         if (data.status === 'ok') {
-            alert("Settings saved to accounts.json. Click 'Apply Profile Changes' to update them on Telegram.");
-            loadAccounts(); // Refresh to reflect potential data structure changes
+            alert("Settings saved successfully!");
         } else {
             alert(`Error: ${data.message}`);
         }
@@ -151,15 +192,8 @@ function applyProfileChanges() {
     })
     .then(r => r.json()).then(data => {
         alert(data.message);
-        if (data.status === 'ok') {
-            closeAccountSettingsModal();
-        }
     });
 }
-
-// ... (rest of the file is unchanged)
-
-
 
 // --- Audience Management ---
 function loadAndDisplayAudiences() {
@@ -223,7 +257,6 @@ function populateAudienceTable(users) {
         tableBody.innerHTML += `<tr><td>${user.id}</td><td>${user.username || 'N/A'}</td><td>${user.first_name || ''} ${user.last_name || ''}</td></tr>`;
     });
 }
-
 
 // --- Campaign Management ---
 function loadCampaigns() {
