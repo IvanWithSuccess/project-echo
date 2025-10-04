@@ -15,7 +15,8 @@ ACCOUNTS_FILE = "accounts.json"
 # --- Main Account Management View ---
 class AccountView(toga.Box):
     def __init__(self, app):
-        super().__init__(style=Pack(direction=COLUMN, padding=10))
+        # Fix DeprecationWarning: padding -> margin
+        super().__init__(style=Pack(direction=COLUMN, margin=10))
         self.app = app
         self.accounts_data = self.load_accounts()
 
@@ -26,11 +27,13 @@ class AccountView(toga.Box):
             missing_value='N/A'
         )
 
-        self.add_button = toga.Button("Add Account", on_press=self.add_account_handler, style=Pack(padding=5))
-        self.login_button = toga.Button("Login", on_press=self.login_handler, style=Pack(padding=5))
-        self.delete_button = toga.Button("Delete Account", on_press=self.delete_account_handler, style=Pack(padding=5))
+        # Fix DeprecationWarning: padding -> margin
+        self.add_button = toga.Button("Add Account", on_press=self.add_account_handler, style=Pack(margin=5))
+        self.login_button = toga.Button("Login", on_press=self.login_handler, style=Pack(margin=5))
+        self.delete_button = toga.Button("Delete Account", on_press=self.delete_account_handler, style=Pack(margin=5))
 
-        button_box = toga.Box(style=Pack(direction=ROW, alignment=CENTER))
+        # Fix DeprecationWarning: alignment -> align_items
+        button_box = toga.Box(style=Pack(direction=ROW, align_items=CENTER))
         button_box.add(self.add_button)
         button_box.add(self.login_button)
         button_box.add(self.delete_button)
@@ -56,11 +59,19 @@ class AccountView(toga.Box):
         add_window.show()
 
     async def login_handler(self, widget):
-        self.dialog(toga.InfoDialog("TODO", "Login functionality will be implemented soon!"))
+        # Fix AttributeError: Call dialog from the main window, not the Box
+        self.app.main_window.dialog(toga.InfoDialog("TODO", "Login functionality will be implemented soon!"))
 
     def delete_account_handler(self, widget):
-        # Implementation from before is fine
-        pass
+        if self.account_list.selection:
+            # Correctly get phone from selection
+            selected_phone = self.account_list.selection[0].phone
+            self.accounts_data = [acc for acc in self.accounts_data if acc['phone'] != selected_phone]
+            self.save_accounts()
+            self.refresh_handler()
+        else:
+            # Fix AttributeError: Call dialog from the main window
+            self.app.main_window.dialog(toga.InfoDialog("No Selection", "Please select an account."))
         
     def refresh_handler(self):
         self.accounts_data = self.load_accounts()
@@ -72,18 +83,18 @@ class AccountView(toga.Box):
 class AddAccountWindow(toga.Window):
     def __init__(self, app, on_success_callback):
         super().__init__(title="Add New Account", size=(400, 200))
-        self.app = app # We need app access for dialogs
+        # The `app` attribute is automatically assigned by Toga.
+        # Manually assigning it with `self.app = app` caused the ValueError.
         self.on_success_callback = on_success_callback
         self.telegram_service = None
 
-        # --- UI Elements ---
-        self.phone_input = toga.TextInput(placeholder='Phone (+123...)', style=Pack(padding=(10,5,0,5)))
-        self.code_input = toga.TextInput(placeholder='Verification Code', style=Pack(padding=(5,5,0,5)))
-        self.password_input = toga.PasswordInput(placeholder='2FA Password', style=Pack(padding=(5,5,0,5)))
-        self.status_label = toga.Label("Enter your phone number to begin.", style=Pack(padding=(10,5)))
-        self.submit_button = toga.Button('Send Code', on_press=self.submit_handler, style=Pack(padding=15))
+        # --- UI Elements (with DeprecationWarning fixes) ---
+        self.phone_input = toga.TextInput(placeholder='Phone (+123...)', style=Pack(margin=(10,5,0,5)))
+        self.code_input = toga.TextInput(placeholder='Verification Code', style=Pack(margin=(5,5,0,5)))
+        self.password_input = toga.PasswordInput(placeholder='2FA Password', style=Pack(margin=(5,5,0,5)))
+        self.status_label = toga.Label("Enter your phone number to begin.", style=Pack(margin=(10,5)))
+        self.submit_button = toga.Button('Send Code', on_press=self.submit_handler, style=Pack(margin=15))
 
-        # Initial state: only show phone input
         self.code_input.style.visibility = 'hidden'
         self.password_input.style.visibility = 'hidden'
 
@@ -95,7 +106,6 @@ class AddAccountWindow(toga.Window):
         content.add(self.submit_button)
         self.content = content
         
-        # State machine for the login flow
         self.current_state = 'phone'
 
     async def submit_handler(self, widget):
@@ -159,10 +169,12 @@ class AddAccountWindow(toga.Window):
                 'user_id': me.id,
                 'username': me.username or 'N/A'
             }
-            # Update the main list of accounts
-            accounts = self.app.main_window.content.content[0].accounts_data
-            accounts.append(new_account)
-            self.app.main_window.content.content[0].save_accounts()
+            
+            # Access AccountView through the app's main window content
+            account_view = self.app.main_window.content.content[0]
+            account_view.accounts_data.append(new_account)
+            account_view.save_accounts()
+            
             self.dialog(toga.InfoDialog('Success', f'Account {me.username} added successfully!'))
             if self.on_success_callback:
                 self.on_success_callback()
