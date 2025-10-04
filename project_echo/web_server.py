@@ -6,7 +6,10 @@ import logging
 from flask import Flask, jsonify, render_template, request
 from project_echo.services.telegram_service import TelegramService
 
+# --- Constants ---
 ACCOUNTS_FILE = "accounts.json"
+API_ID = 26947469
+API_HASH = "731a222f9dd8b290db925a6a382159dd"
 
 app = Flask(
     __name__,
@@ -15,9 +18,9 @@ app = Flask(
 )
 
 # --- State Management ---
-# This is a simple in-memory store for pending logins. 
+# This is a simple in-memory store for phone_code_hash.
 # In a production app, you'd use a more robust solution like Redis.
-pending_logins = {}
+pending_hashes = {}
 
 # --- Helper Functions ---
 
@@ -32,7 +35,6 @@ def load_accounts():
 
 def save_account(phone, username):
     accounts = load_accounts()
-    # Avoid duplicates
     if not any(acc['phone'] == phone for acc in accounts):
         accounts.append({"phone": phone, "username": username})
         with open(ACCOUNTS_FILE, 'w') as f:
@@ -50,17 +52,26 @@ def add_account():
     if not phone:
         return jsonify({'status': 'error', 'message': 'Phone number is required.'}), 400
 
-    service = TelegramService(phone)
-    status = asyncio.run(service.start_login())
+    # Each request gets its own event loop to be thread-safe
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    service = TelegramService(phone, API_ID, API_HASH)
+    status, phone_code_hash = loop.run_until_complete(service.start_login())
+    loop.close()
 
     if status == 'CODE_SENT':
-        pending_logins[phone] = service  # Store the service instance
+        pending_hashes[phone] = phone_code_hash  # Store the hash
         return jsonify({'status': 'ok', 'message': 'Verification code sent.'})
         
     elif status == 'ALREADY_AUTHORIZED':
-        user = asyncio.run(service.get_me())
-        save_account(phone, user.username)
-        asyncio.run(service.disconnect())
+        # If already authorized, we need a new loop to get user info
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        user = loop.run_until_complete(service.get_me())
+        loop.close()
+        if user:
+             save_account(phone, user.username)
         return jsonify({'status': 'ok', 'message': 'Account already authorized and added.'})
 
     else:
@@ -72,42 +83,47 @@ def finalize_account():
     code = request.json.get('code')
     password = request.json.get('password')
     
-    if not phone or phone not in pending_logins:
-        return jsonify({'status': 'error', 'message': 'No pending login found for this phone.'}), 404
+    if not phone:
+         return jsonify({'status': 'error', 'message': 'Phone is required.'}), 400
 
-    service = pending_logins[phone]
+    service = TelegramService(phone, API_ID, API_HASH)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     status = ''
 
     try:
         if code:
-            status = asyncio.run(service.submit_code(code))
+            phone_code_hash = pending_hashes.get(phone)
+            if not phone_code_hash:
+                return jsonify({'status': 'error', 'message': 'Login session expired. Please try again.'}), 400
+            status = loop.run_until_complete(service.submit_code(code, phone_code_hash))
+        
         elif password:
-            status = asyncio.run(service.submit_password(password))
+            status = loop.run_until_complete(service.submit_password(password))
+
         else:
             return jsonify({'status': 'error', 'message': 'Code or password is required.'}), 400
 
+        # --- Handle results ---
         if status == 'SUCCESS':
-            user = asyncio.run(service.get_me())
-            save_account(phone, user.username)
-            del pending_logins[phone]
-            asyncio.run(service.disconnect())
+            user = loop.run_until_complete(service.get_me())
+            if user:
+                save_account(phone, user.username)
+            if phone in pending_hashes: del pending_hashes[phone] # Clean up
             return jsonify({'status': 'ok', 'message': 'Account connected successfully!'})
             
         elif status == 'PASSWORD_NEEDED':
+            # The connection is kept alive by the service in this specific case
             return jsonify({'status': 'ok', 'message': '2FA password required.'})
             
         else:
-             # Handle other errors like wrong code
-            del pending_logins[phone] # Clean up failed attempt
-            asyncio.run(service.disconnect())
+            if phone in pending_hashes: del pending_hashes[phone] # Clean up failed attempt
             return jsonify({'status': 'error', 'message': f'Login failed: {status}'}), 500
 
-    except Exception as e:
-        logging.error(f"Finalize error for {phone}: {e}")
-        if phone in pending_logins:
-            del pending_logins[phone]
-            asyncio.run(service.disconnect())
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+    finally:
+        # Ensure the loop is always closed
+        if not loop.is_closed():
+            loop.close()
 
 # --- Web Page Routes ---
 

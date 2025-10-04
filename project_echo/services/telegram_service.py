@@ -4,71 +4,107 @@ import os
 from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
 
-# App credentials provided by you
-API_ID = 26947469
-API_HASH = '731a222f9dd8b290db925a6a382159dd'
 SESSIONS_DIR = "sessions"
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class TelegramService:
-    def __init__(self, phone):
+    """
+    A stateless service for interacting with Telegram.
+    Each method is self-contained and manages its own connection.
+    """
+    def __init__(self, phone: str, api_id: int, api_hash: str):
         if not os.path.exists(SESSIONS_DIR):
             os.makedirs(SESSIONS_DIR)
         
+        self.phone = phone
+        self.api_id = api_id
+        self.api_hash = api_hash
         self.session_name = phone.replace('+', '')
         session_path = os.path.join(SESSIONS_DIR, self.session_name)
-        self.client = TelegramClient(session_path, API_ID, API_HASH)
-        self.phone = phone
-        self.phone_code_hash = None
+        self.client = TelegramClient(session_path, self.api_id, self.api_hash)
 
-    async def disconnect(self):
-        if self.client.is_connected():
-            logging.info(f'[{self.session_name}] Disconnecting...')
-            await self.client.disconnect()
-            logging.info(f'[{self.session_name}] Disconnection complete!')
-
-    async def start_login(self):
-        logging.info(f'[{self.session_name}] Connecting...')
+    async def start_login(self) -> (str, str | None):
+        """
+        Connects, starts the login process, and returns the status and phone_code_hash.
+        """
+        logging.info(f"[{self.session_name}] Connecting for login...")
         await self.client.connect()
-        if not await self.client.is_user_authorized():
-            logging.info(f'[{self.session_name}] Sending code request...')
+        
+        status = None
+        phone_code_hash = None
+
+        if await self.client.is_user_authorized():
+            logging.info(f"[{self.session_name}] Already authorized.")
+            status = 'ALREADY_AUTHORIZED'
+        else:
+            logging.info(f"[{self.session_name}] Sending code request...")
             try:
                 result = await self.client.send_code_request(self.phone)
-                self.phone_code_hash = result.phone_code_hash
-                return 'CODE_SENT'
+                phone_code_hash = result.phone_code_hash
+                status = 'CODE_SENT'
             except Exception as e:
-                logging.error(f'[{self.session_name}] Failed to send code: {e}')
-                await self.disconnect()
-                return False
-        else:
-            logging.info(f'[{self.session_name}] Already authorized.')
-            return 'ALREADY_AUTHORIZED'
+                logging.error(f"[{self.session_name}] Failed to send code: {e}")
+                status = 'ERROR'
 
-    async def submit_code(self, code):
-        logging.info(f'[{self.session_name}] Submitting code...')
+        logging.info(f"[{self.session_name}] Disconnecting after login start.")
+        await self.client.disconnect()
+        return status, phone_code_hash
+
+    async def submit_code(self, code: str, phone_code_hash: str) -> str:
+        """
+        Connects, submits the verification code, and returns the result.
+        """
+        logging.info(f"[{self.session_name}] Connecting to submit code...")
+        await self.client.connect()
+        status = ''
         try:
-            await self.client.sign_in(self.phone, code, phone_code_hash=self.phone_code_hash)
-            return 'SUCCESS'
+            await self.client.sign_in(self.phone, code, phone_code_hash=phone_code_hash)
+            status = 'SUCCESS'
         except SessionPasswordNeededError:
-            logging.info(f'[{self.session_name}] Password needed.')
-            return 'PASSWORD_NEEDED'
+            logging.info(f"[{self.session_name}] Password needed.")
+            status = 'PASSWORD_NEEDED'
         except Exception as e:
-            logging.error(f'[{self.session_name}] Code submission error: {e}')
-            return str(e)
+            logging.error(f"[{self.session_name}] Code submission error: {e}")
+            status = str(e)
+        
+        # Don't disconnect if password is needed, we'll use the same connection
+        if status != 'PASSWORD_NEEDED':
+            logging.info(f"[{self.session_name}] Disconnecting after code submission.")
+            await self.client.disconnect()
 
-    async def submit_password(self, password):
-        logging.info(f'[{self.session_name}] Submitting password...')
+        return status
+
+    async def submit_password(self, password: str) -> str:
+        """
+        Connects (or uses existing connection), submits the 2FA password, and returns the result.
+        """
+        if not self.client.is_connected():
+            logging.info(f"[{self.session_name}] Connecting to submit password...")
+            await self.client.connect()
+        
+        status = ''
         try:
             await self.client.sign_in(password=password)
-            return 'SUCCESS'
+            status = 'SUCCESS'
         except Exception as e:
-            logging.error(f'[{self.session_name}] Password submission error: {e}')
-            return str(e)
+            logging.error(f"[{self.session_name}] Password submission error: {e}")
+            status = str(e)
+        
+        logging.info(f"[{self.session_name}] Disconnecting after password submission.")
+        await self.client.disconnect()
+        return status
 
     async def get_me(self):
-        if not self.client.is_connected():
-            await self.client.connect()
+        """
+        Connects, gets user info, and disconnects.
+        """
+        logging.info(f"[{self.session_name}] Connecting to get user info...")
+        await self.client.connect()
+        user = None
         if await self.client.is_user_authorized():
-            return await self.client.get_me()
-        return None
+            user = await self.client.get_me()
+        
+        logging.info(f"[{self.session_name}] Disconnecting after getting user info.")
+        await self.client.disconnect()
+        return user
