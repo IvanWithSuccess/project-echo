@@ -73,6 +73,7 @@ def add_account():
     
     status, result = loop.run_until_complete(service.start_login())
     
+    response = {}
     if status == 'CODE_SENT':
         pending_hashes[phone] = result  # phone_code_hash
         response = {'status': 'ok', 'message': 'Verification code sent.'}
@@ -81,7 +82,7 @@ def add_account():
         save_account(phone, user.username if user else None)
         response = {'status': 'ok', 'message': 'Account already authorized and added.'}
     else:
-        response = {'status': 'error', 'message': 'Failed to start login process.'}
+        response = {'status': 'error', 'message': f'Failed to start login process: {result}'}
 
     loop.run_until_complete(graceful_shutdown(loop))
     loop.close()
@@ -97,9 +98,10 @@ def finalize_account():
 
     if not phone: return jsonify({'status': 'error', 'message': 'Phone number is missing.'}), 400
 
-    service = TelegramService(phone, API_ID, API_HASH)
+    # FIX: Create and set event loop *before* initializing TelegramService
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    service = TelegramService(phone, API_ID, API_HASH)
 
     status = ""
     if code and phone_code_hash:
@@ -164,7 +166,6 @@ def save_audience_route():
     if not filename or not users:
         return jsonify({'status': 'error', 'message': 'Filename and users are required.'}), 400
         
-    # Sanitize filename
     safe_filename = "".join(c for c in filename if c.isalnum() or c in ('_', '-')) + '.json'
     file_path = os.path.join(AUDIENCE_DIR, safe_filename)
     
@@ -218,7 +219,6 @@ async def run_campaign_async(campaign_id):
     active_campaigns.add(campaign_id)
     logging.info(f"Starting campaign {campaign_id}...")
     
-    # We need a mutable reference to the campaign list to update it
     campaigns = load_json(CAMPAIGNS_FILE)
     campaign = next((c for c in campaigns if c.get('id') == campaign_id), None)
     
@@ -264,7 +264,6 @@ async def run_campaign_async(campaign_id):
         logging.error(f"Campaign {campaign_id} failed: {e}")
         campaign['status'] = 'Failed'
     finally:
-        # Re-find the campaign in the list to update its final status
         campaigns = load_json(CAMPAIGNS_FILE)
         final_campaign_state = next((c for c in campaigns if c.get('id') == campaign_id), None)
         if final_campaign_state:
@@ -278,7 +277,6 @@ def start_campaign_route():
     if not campaign_id:
         return jsonify({'status': 'error', 'message': 'Campaign ID is required.'}), 400
     
-    # Run the async campaign function in a separate daemon thread
     campaign_thread = threading.Thread(target=run_campaign_in_new_loop, args=(campaign_id,), daemon=True)
     campaign_thread.start()
 
