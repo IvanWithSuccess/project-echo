@@ -21,11 +21,9 @@ function loadAccounts() {
 }
 
 function addAccount() {
-    // Only prompt for the phone number
     const phone = prompt("Enter phone number (e.g., +1234567890):");
     if (!phone) return;
 
-    // Send initial request with just the phone number
     fetch('/api/accounts/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -38,12 +36,7 @@ function addAccount() {
             if (code) {
                 finalizeConnection(phone, code, null);
             }
-        } else if (data.status === 'ok' && data.message === '2FA password required.') {
-            const password = prompt("Enter your 2FA password:");
-            if (password) {
-                finalizeConnection(phone, null, password);
-            }
-        } else if (data.status === 'ok') {
+        } else if (data.status === 'ok' && data.message === 'Account already authorized and added.'){
             alert('Account added successfully!');
             loadAccounts(); // Refresh the list
         } else {
@@ -64,9 +57,14 @@ function finalizeConnection(phone, code, password) {
     })
     .then(response => response.json())
     .then(data => {
-        if (data.status === 'ok') {
+        if (data.status === 'ok' && data.message === 'Account connected successfully!') {
             alert('Account connected successfully!');
             loadAccounts(); // Refresh the list
+        } else if (data.status === 'ok' && data.message === '2FA password required.') {
+            const password = prompt("Enter your 2FA password:");
+            if (password) {
+                finalizeConnection(phone, null, password);
+            }
         } else {
             alert(`Error: ${data.message}`);
         }

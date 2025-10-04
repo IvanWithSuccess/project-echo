@@ -19,6 +19,7 @@ class TelegramService:
         self.session_name = phone.replace('+', '')
         session_path = os.path.join(SESSIONS_DIR, self.session_name)
         self.client = TelegramClient(session_path, API_ID, API_HASH)
+        self.phone = phone
         self.phone_code_hash = None
 
     async def disconnect(self):
@@ -33,21 +34,21 @@ class TelegramService:
         if not await self.client.is_user_authorized():
             logging.info(f'[{self.session_name}] Sending code request...')
             try:
-                result = await self.client.send_code_request(self.session_name)
+                result = await self.client.send_code_request(self.phone)
                 self.phone_code_hash = result.phone_code_hash
-                return True
+                return 'CODE_SENT'
             except Exception as e:
                 logging.error(f'[{self.session_name}] Failed to send code: {e}')
-                await self.disconnect() # Disconnect on failure
+                await self.disconnect()
                 return False
         else:
             logging.info(f'[{self.session_name}] Already authorized.')
-            return True
+            return 'ALREADY_AUTHORIZED'
 
     async def submit_code(self, code):
         logging.info(f'[{self.session_name}] Submitting code...')
         try:
-            await self.client.sign_in(self.session_name, code, phone_code_hash=self.phone_code_hash)
+            await self.client.sign_in(self.phone, code, phone_code_hash=self.phone_code_hash)
             return 'SUCCESS'
         except SessionPasswordNeededError:
             logging.info(f'[{self.session_name}] Password needed.')
