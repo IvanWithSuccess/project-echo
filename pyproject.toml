@@ -1,10 +1,16 @@
 [project]
-name = "myapp"
+name = "project-echo"
 version = "0.1.0"
-description = "Add your description here"
+description = "Telegram management and advertising tool."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
-    "flet[all]>=0.28.3",
-    "telethon>=1.41.2",
+    "toga>=0.4.2",
+    "telethon>=1.34.0"
 ]
+
+[tool.briefcase]
+project_name = "Project Echo"
+bundle = "org.beeware"
+version = "0.1.0"
+formal_name = "Project Echo"
