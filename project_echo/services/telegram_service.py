@@ -22,9 +22,14 @@ class TelegramService:
         self.session_name = phone.replace('+', '')
         session_path = os.path.join(SESSIONS_DIR, self.session_name)
         
+        # Telethon recommends proxy to be a dict or a tuple
+        proxy_formatted = None
+        if proxy and proxy.get('host') and proxy.get('port'):
+            proxy_formatted = (proxy['type'], proxy['host'], proxy['port'], True, proxy.get('user'), proxy.get('pass'))
+
         self.client = TelegramClient(session_path, self.api_id, self.api_hash,
                                    system_version=system_version or '4.16.30-vxCUSTOM',
-                                   proxy=proxy)
+                                   proxy=proxy_formatted)
 
     async def start_login(self) -> (str, str | None):
         logging.info(f"[{self.session_name}] Connecting for login...")
@@ -41,7 +46,8 @@ class TelegramService:
                 status = 'CODE_SENT'
             except Exception as e:
                 logging.error(f"[{self.session_name}] Failed to send code: {e}")
-                status, phone_code_hash = 'ERROR', str(e)
+                status = str(e) # Status now contains the error
+                phone_code_hash = None # Hash is correctly None on error
         await self.client.disconnect()
         return status, phone_code_hash
 
@@ -72,7 +78,9 @@ class TelegramService:
 
     async def get_me(self):
         await self.client.connect()
-        user = await self.client.get_me() if await self.client.is_user_authorized() else None
+        user = None
+        if await self.client.is_user_authorized():
+             user = await self.client.get_me()
         await self.client.disconnect()
         return user
 
