@@ -16,7 +16,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
 
 /* --- General Elements --- */
 h1 { font-weight: 500; color: #2c3e50; }
-button, .action-btn { background-color: #1abc9c; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; }
+button, .action-btn { background-color: #1abc9c; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; transition: background-color 0.2s; font-size: 1em; }
 button:hover, .action-btn:hover { background-color: #16a085; }
 button.delete-btn { background-color: #e74c3c; }
 button.delete-btn:hover { background-color: #c0392b; }
@@ -45,9 +45,19 @@ tr:nth-child(even) { background-color: #f9f9f9; }
 
 .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
+/* Profile Settings Specifics */
+.profile-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; align-items: start; }
+.profile-fields { display: flex; flex-direction: column; }
+.avatar-section { text-align: center; }
+#avatar-preview { width: 120px; height: 120px; border-radius: 50%; border: 3px solid #ecf0f1; object-fit: cover; margin-bottom: 15px; }
+.avatar-section button { width: 100%; }
+
 .settings-footer { margin-top: 20px; text-align: right; }
 
 /* Responsive */
+@media (max-width: 900px) {
+    .profile-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 768px) {
     .form-grid-2 { grid-template-columns: 1fr; }
 }

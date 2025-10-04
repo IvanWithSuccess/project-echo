@@ -7,6 +7,7 @@ import random
 import uuid
 import threading
 from flask import Flask, jsonify, render_template, request
+from werkzeug.utils import secure_filename
 from project_echo.services.telegram_service import TelegramService
 
 # --- Constants ---
@@ -49,15 +50,20 @@ def get_account_by_phone(phone):
     accounts = load_accounts()
     return next((acc for acc in accounts if acc.get('phone') == phone), None)
 
-def save_account(phone, username):
+def save_account(phone, username, first_name, last_name):
     accounts = load_accounts()
-    if not any(acc.get('phone') == phone for acc in accounts):
+    account = next((acc for acc in accounts if acc.get('phone') == phone), None)
+    if not account:
         new_account = {
             "phone": phone, "username": username,
             "settings": {
                 "tags": [], "system_version": None,
-                "proxy": None, "profile": { # Ensure profile key is created
-                    "first_name": "", "last_name": "", "bio": "", "avatar_path": ""
+                "proxy": None, 
+                "profile": { 
+                    "first_name": first_name or "",
+                    "last_name": last_name or "", 
+                    "bio": "", 
+                    "avatar_path": ""
                 }
             }
         }
@@ -101,7 +107,8 @@ def add_account():
         response = {'status': 'ok', 'message': 'Verification code sent.'}
     elif status == 'ALREADY_AUTHORIZED':
         user = loop.run_until_complete(service.get_me())
-        save_account(phone, user.username if user else None)
+        if user:
+            save_account(phone, user.username, user.first_name, user.last_name)
         response = {'status': 'ok', 'message': 'Account already authorized and added.'}
     else:
         response = {'status': 'error', 'message': f'Failed to start login: {result}'}
@@ -132,7 +139,8 @@ def finalize_account():
     response = {}
     if status == 'SUCCESS':
         user = loop.run_until_complete(service.get_me())
-        save_account(phone, user.username if user else None)
+        if user:
+            save_account(phone, user.username, user.first_name, user.last_name)
         if phone in pending_hashes: del pending_hashes[phone]
         response = {'status': 'ok', 'message': 'Account connected successfully!'}
     elif status == 'PASSWORD_NEEDED':
@@ -143,6 +151,23 @@ def finalize_account():
     loop.run_until_complete(graceful_shutdown(loop))
     loop.close()
     return jsonify(response)
+
+@app.route('/api/accounts/upload_avatar', methods=['POST'])
+def upload_avatar():
+    if 'avatar' not in request.files:
+        return jsonify({'status': 'error', 'message': 'No file part'}), 400
+    file = request.files['avatar']
+    if file.filename == '':
+        return jsonify({'status': 'error', 'message': 'No selected file'}), 400
+    if file:
+        filename = secure_filename(file.filename)
+        _, ext = os.path.splitext(filename)
+        unique_filename = f"{uuid.uuid4()}{ext}"
+        filepath = os.path.join(UPLOADS_DIR, unique_filename)
+        file.save(filepath)
+        return jsonify({'status': 'ok', 'path': filepath})
+    return jsonify({'status': 'error', 'message': 'File upload failed'}), 500
+
 
 @app.route('/api/accounts/settings', methods=['POST'])
 def update_account_settings():

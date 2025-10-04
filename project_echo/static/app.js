@@ -121,6 +121,9 @@ function openAccountSettings(account) {
     document.getElementById('account-bio').value = profile.bio || '';
     document.getElementById('account-avatar-path').value = profile.avatar_path || '';
     document.getElementById('account-user-agent-input').value = settings.system_version || '';
+    
+    const preview = document.getElementById('avatar-preview');
+    preview.src = profile.avatar_path ? `/` + profile.avatar_path : '/static/placeholder.png';
 
     // Proxy Tab
     document.getElementById('account-proxy-type').value = proxy.type || 'socks5';
@@ -134,6 +137,29 @@ function openAccountSettings(account) {
     
     // Set first tab as active
     openSettingsTab({currentTarget: document.querySelector('.tab-link')}, 'main-settings');
+}
+
+function handleAvatarUpload() {
+    const input = document.getElementById('avatar-upload-input');
+    const preview = document.getElementById('avatar-preview');
+    const file = input.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    fetch('/api/accounts/upload_avatar', { method: 'POST', body: formData })
+    .then(r => r.json()).then(data => {
+        if(data.status === 'ok') {
+            document.getElementById('account-avatar-path').value = data.path;
+            preview.src = `/` + data.path; // Update preview
+        } else {
+            alert('Upload failed: ' + data.message);
+        }
+    }).catch(e => {
+        alert('An error occurred during upload.');
+        console.error(e);
+    });
 }
 
 function saveAccountSettings() {

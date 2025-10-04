@@ -83,6 +83,7 @@
                 <button onclick="showMainAccountsPage()">&#8592; Back to Accounts</button>
             </div>
             <input type="hidden" id="settings-account-phone">
+            <input type="hidden" id="account-avatar-path">
 
             <div class="tab-bar">
                 <button class="tab-link active" onclick="openSettingsTab(event, 'main-settings')">Main</button>
@@ -94,15 +95,23 @@
             <div id="main-settings" class="tab-content active">
                 <div class="form-section">
                     <h4>Profile</h4>
-                    <div class="form-grid-2">
-                        <div><label>First Name</label><input type="text" id="account-first-name"></div>
-                        <div><label>Last Name</label><input type="text" id="account-last-name"></div>
+                    <div class="profile-grid">
+                        <div class="profile-fields">
+                            <div class="form-grid-2">
+                                <div><label>First Name</label><input type="text" id="account-first-name"></div>
+                                <div><label>Last Name</label><input type="text" id="account-last-name"></div>
+                            </div>
+                            <label>Bio (About)</label>
+                            <textarea id="account-bio" rows="3"></textarea>
+                        </div>
+                        <div class="avatar-section">
+                            <label>Avatar</label>
+                            <img id="avatar-preview" src="/static/placeholder.png" alt="Avatar Preview">
+                            <input type="file" id="avatar-upload-input" accept="image/jpeg, image/png" onchange="handleAvatarUpload()" style="display: none;">
+                            <button onclick="document.getElementById('avatar-upload-input').click()">Upload Image</button>
+                        </div>
                     </div>
-                    <label>Bio (About)</label>
-                    <textarea id="account-bio" rows="3"></textarea>
-                    <label>Avatar Path (temp)</label>
-                    <input type="text" id="account-avatar-path" placeholder="e.g., uploads/avatar1.jpg">
-                    <button class="action-btn" onclick="applyProfileChanges()">Apply Profile Changes</button>
+                     <button class="action-btn" onclick="applyProfileChanges()">Apply Profile Changes</button>
                 </div>
                 <div class="form-section">
                     <h4>Connection</h4>
