@@ -52,7 +52,7 @@ def add_account():
     if not phone:
         return jsonify({'status': 'error', 'message': 'Phone number is required.'}), 400
 
-    # Each request gets its own event loop to be thread-safe
+    # CORRECT ORDER: Create and set the loop BEFORE instantiating the service
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
@@ -68,6 +68,8 @@ def add_account():
         # If already authorized, we need a new loop to get user info
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        # We need a new service instance that will use the new loop
+        service = TelegramService(phone, API_ID, API_HASH)
         user = loop.run_until_complete(service.get_me())
         loop.close()
         if user:
@@ -86,9 +88,11 @@ def finalize_account():
     if not phone:
          return jsonify({'status': 'error', 'message': 'Phone is required.'}), 400
 
-    service = TelegramService(phone, API_ID, API_HASH)
+    # CORRECT ORDER: Create and set the loop BEFORE instantiating the service
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+
+    service = TelegramService(phone, API_ID, API_HASH)
     status = ''
 
     try:
@@ -106,6 +110,12 @@ def finalize_account():
 
         # --- Handle results ---
         if status == 'SUCCESS':
+            # We need a new loop to get user info after a successful login
+            loop.close() # Close the old one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            service = TelegramService(phone, API_ID, API_HASH)
+
             user = loop.run_until_complete(service.get_me())
             if user:
                 save_account(phone, user.username)
@@ -113,7 +123,7 @@ def finalize_account():
             return jsonify({'status': 'ok', 'message': 'Account connected successfully!'})
             
         elif status == 'PASSWORD_NEEDED':
-            # The connection is kept alive by the service in this specific case
+            # The connection is kept alive by the service, so we DON'T close the loop here.
             return jsonify({'status': 'ok', 'message': '2FA password required.'})
             
         else:
@@ -121,8 +131,8 @@ def finalize_account():
             return jsonify({'status': 'error', 'message': f'Login failed: {status}'}), 500
 
     finally:
-        # Ensure the loop is always closed
-        if not loop.is_closed():
+        # Ensure the loop is always closed unless we are waiting for a password
+        if status != 'PASSWORD_NEEDED' and not loop.is_closed():
             loop.close()
 
 # --- Web Page Routes ---
