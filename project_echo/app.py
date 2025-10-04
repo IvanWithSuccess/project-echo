@@ -1,6 +1,7 @@
 
 import toga
 from toga.style import Pack
+from toga.style.pack import COLUMN
 
 # Import views
 from project_echo.views.account_view import AccountView
@@ -12,21 +13,28 @@ class ProjectEcho(toga.App):
         # 1. Create the main window
         self.main_window = toga.MainWindow(title=self.formal_name, size=(800, 600))
 
-        # 2. Create the tab container
-        self.option_container = toga.OptionContainer()
+        # 2. Create a root container box that will hold everything.
+        # This provides a stable parent for the OptionContainer.
+        root_box = toga.Box(style=Pack(direction=COLUMN, flex=1))
 
-        # 3. IMPORTANT: Assign the container to the window *before* adding content
-        self.main_window.content = self.option_container
+        # 3. Create the tab container and make it expand to fill the root_box.
+        self.option_container = toga.OptionContainer(style=Pack(flex=1))
 
-        # 4. Create the content for the tabs
+        # 4. Add the tab container to the root box *before* we add content to the tabs.
+        root_box.add(self.option_container)
+
+        # 5. Now, create the views that will go inside the tabs.
         account_manager_view = AccountView(self)
         ad_cabinet_view = AdCabinetView(self)
 
-        # 5. Now, add the tabs to the container
+        # 6. With the hierarchy established, add the views as tabs.
         self.option_container.add('Accounts', account_manager_view)
         self.option_container.add('Ad Cabinet', ad_cabinet_view)
 
-        # 6. Show the main window
+        # 7. Set the stable root_box as the content of the main window.
+        self.main_window.content = root_box
+
+        # 8. Show the window.
         self.main_window.show()
 
 
