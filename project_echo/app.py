@@ -10,33 +10,29 @@ from project_echo.views.ad_cabinet_view import AdCabinetView
 class ProjectEcho(toga.App):
 
     def startup(self):
-        # 1. Create the main window
+        # 1. Create the main window and tab container
         self.main_window = toga.MainWindow(title=self.formal_name, size=(800, 600))
-
-        # 2. Create a root container box that will hold everything.
-        # This provides a stable parent for the OptionContainer.
-        root_box = toga.Box(style=Pack(direction=COLUMN, flex=1))
-
-        # 3. Create the tab container and make it expand to fill the root_box.
         self.option_container = toga.OptionContainer(style=Pack(flex=1))
 
-        # 4. Add the tab container to the root box *before* we add content to the tabs.
-        root_box.add(self.option_container)
+        # 2. Set the (empty) tab container as the window's content
+        self.main_window.content = self.option_container
 
-        # 5. Now, create the views that will go inside the tabs.
+        # 3. Show the window *before* adding content to the tabs.
+        # This can help resolve lifecycle issues on some platforms.
+        self.main_window.show()
+
+        # 4. Defer the addition of tabs slightly by scheduling it on the app's main loop.
+        # This gives the UI time to fully initialize.
+        self.add_background_task(self.add_tabs)
+
+    async def add_tabs(self, widget, **kwargs):
+        # 5. Create the actual views/content for the tabs.
         account_manager_view = AccountView(self)
         ad_cabinet_view = AdCabinetView(self)
 
-        # 6. With the hierarchy established, add the views as tabs.
+        # 6. Now, add the tabs to the already-visible container.
         self.option_container.add('Accounts', account_manager_view)
         self.option_container.add('Ad Cabinet', ad_cabinet_view)
-
-        # 7. Set the stable root_box as the content of the main window.
-        self.main_window.content = root_box
-
-        # 8. Show the window.
-        self.main_window.show()
-
 
 def main():
     return ProjectEcho('Project Echo', 'org.beeware.project_echo')
