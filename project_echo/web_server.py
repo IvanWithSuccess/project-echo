@@ -9,6 +9,7 @@ from project_echo.services.telegram_service import TelegramService
 # --- Constants ---
 ACCOUNTS_FILE = "accounts.json"
 SESSIONS_DIR = "sessions"
+AUDIENCE_DIR = "audiences"
 API_ID = 26947469
 API_HASH = "731a222f9dd8b290db925a6a382159dd"
 
@@ -18,11 +19,17 @@ app = Flask(
     static_folder='static'
 )
 
+# --- Initial Setup ---
+def setup_directories():
+    if not os.path.exists(SESSIONS_DIR):
+        os.makedirs(SESSIONS_DIR)
+    if not os.path.exists(AUDIENCE_DIR):
+        os.makedirs(AUDIENCE_DIR)
+
 # --- State Management ---
 pending_hashes = {}
 
 # --- Helper Functions ---
-
 def load_accounts():
     if not os.path.exists(ACCOUNTS_FILE):
         return []
@@ -43,7 +50,6 @@ def save_account(phone, username):
         save_accounts(accounts)
 
 async def graceful_shutdown(loop):
-    """Cancels all running tasks and shuts down the loop."""
     tasks = [t for t in asyncio.all_tasks(loop=loop) if t is not asyncio.current_task(loop=loop)]
     for task in tasks:
         task.cancel()
@@ -58,131 +64,113 @@ def get_accounts():
 @app.route('/api/accounts/add', methods=['POST'])
 def add_account():
     phone = request.json.get('phone')
-    if not phone:
-        return jsonify({'status': 'error', 'message': 'Phone number is required.'}), 400
-
-    loop = asyncio.new_event_loop()
+    if not phone: return jsonify({'status': 'error', 'message': 'Phone number is required.'}), 400
+    loop, service = asyncio.new_event_loop(), TelegramService(phone, API_ID, API_HASH)
     asyncio.set_event_loop(loop)
-
-    service = TelegramService(phone, API_ID, API_HASH)
     status, phone_code_hash = loop.run_until_complete(service.start_login())
-    loop.run_until_complete(graceful_shutdown(loop))
-    loop.close()
-
+    loop.run_until_complete(graceful_shutdown(loop)); loop.close()
     if status == 'CODE_SENT':
         pending_hashes[phone] = phone_code_hash
         return jsonify({'status': 'ok', 'message': 'Verification code sent.'})
-        
     elif status == 'ALREADY_AUTHORIZED':
-        loop = asyncio.new_event_loop()
+        loop, service = asyncio.new_event_loop(), TelegramService(phone, API_ID, API_HASH)
         asyncio.set_event_loop(loop)
-        service = TelegramService(phone, API_ID, API_HASH)
         user = loop.run_until_complete(service.get_me())
-        loop.run_until_complete(graceful_shutdown(loop))
-        loop.close()
-        if user:
-             save_account(phone, user.username)
+        loop.run_until_complete(graceful_shutdown(loop)); loop.close()
+        if user: save_account(phone, user.username)
         return jsonify({'status': 'ok', 'message': 'Account already authorized and added.'})
-
     else:
         return jsonify({'status': 'error', 'message': 'Failed to start login process.'}), 500
 
 @app.route('/api/accounts/finalize', methods=['POST'])
 def finalize_account():
-    phone = request.json.get('phone')
-    code = request.json.get('code')
-    password = request.json.get('password')
-    
-    if not phone:
-         return jsonify({'status': 'error', 'message': 'Phone is required.'}), 400
-
-    loop = asyncio.new_event_loop()
+    data = request.json
+    phone, code, password = data.get('phone'), data.get('code'), data.get('password')
+    if not phone: return jsonify({'status': 'error', 'message': 'Phone is required.'}), 400
+    loop, service = asyncio.new_event_loop(), TelegramService(phone, API_ID, API_HASH)
     asyncio.set_event_loop(loop)
-
-    service = TelegramService(phone, API_ID, API_HASH)
     status = ''
-
     try:
         if code:
             phone_code_hash = pending_hashes.get(phone)
-            if not phone_code_hash:
-                return jsonify({'status': 'error', 'message': 'Login session expired. Please try again.'}), 400
+            if not phone_code_hash: return jsonify({'status': 'error', 'message': 'Login session expired.'}), 400
             status = loop.run_until_complete(service.submit_code(code, phone_code_hash))
-        
         elif password:
             status = loop.run_until_complete(service.submit_password(password))
-
         else:
             return jsonify({'status': 'error', 'message': 'Code or password is required.'}), 400
-
         if status == 'SUCCESS':
             user = loop.run_until_complete(service.get_me())
-            if user:
-                save_account(phone, user.username)
+            if user: save_account(phone, user.username)
             if phone in pending_hashes: del pending_hashes[phone]
             return jsonify({'status': 'ok', 'message': 'Account connected successfully!'})
-            
         elif status == 'PASSWORD_NEEDED':
             return jsonify({'status': 'ok', 'message': '2FA password required.'})
-            
         else:
             if phone in pending_hashes: del pending_hashes[phone]
             return jsonify({'status': 'error', 'message': f'Login failed: {status}'}), 500
-
     finally:
-        if not loop.is_closed():
-            loop.run_until_complete(graceful_shutdown(loop))
-            loop.close()
+        if not loop.is_closed(): loop.run_until_complete(graceful_shutdown(loop)); loop.close()
 
 @app.route('/api/accounts/delete', methods=['POST'])
 def delete_account_route():
     phone = request.json.get('phone')
-    if not phone:
-        return jsonify({'status': 'error', 'message': 'Phone number is required.'}), 400
-
+    if not phone: return jsonify({'status': 'error', 'message': 'Phone is required.'}), 400
     accounts = load_accounts()
     updated_accounts = [acc for acc in accounts if acc['phone'] != phone]
-
-    if len(accounts) == len(updated_accounts):
-        return jsonify({'status': 'error', 'message': 'Account not found.'}), 404
-
+    if len(accounts) == len(updated_accounts): return jsonify({'status': 'error', 'message': 'Account not found.'}), 404
     save_accounts(updated_accounts)
-
     session_file = os.path.join(SESSIONS_DIR, f"{phone.replace('+', '')}.session")
-    if os.path.exists(session_file):
-        os.remove(session_file)
-
+    if os.path.exists(session_file): os.remove(session_file)
     return jsonify({'status': 'ok', 'message': 'Account deleted successfully.'})
 
 @app.route('/api/audience/scrape', methods=['POST'])
 def scrape_audience_route():
-    phone = request.json.get('phone')
-    chat_link = request.json.get('chat_link')
-
-    if not phone or not chat_link:
-        return jsonify({'status': 'error', 'message': 'Phone and chat link are required.'}), 400
-
-    loop = asyncio.new_event_loop()
+    phone, chat_link = request.json.get('phone'), request.json.get('chat_link')
+    if not phone or not chat_link: return jsonify({'status': 'error', 'message': 'Phone and chat link are required.'}), 400
+    loop, service = asyncio.new_event_loop(), TelegramService(phone, API_ID, API_HASH)
     asyncio.set_event_loop(loop)
-    service = TelegramService(phone, API_ID, API_HASH)
     status, users = loop.run_until_complete(service.get_chat_participants(chat_link))
-    loop.run_until_complete(graceful_shutdown(loop))
-    loop.close()
-
-    if status == "SUCCESS":
-        return jsonify({'status': 'ok', 'users': users})
+    loop.run_until_complete(graceful_shutdown(loop)); loop.close()
+    if status == "SUCCESS": return jsonify({'status': 'ok', 'users': users})
     else:
         error_message = status
-        if 'No object found for' in status:
-            error_message = f"Could not find the chat '{chat_link}'. Please check the username/link or make sure the selected account has joined it."
-        elif 'A wait of' in status and 'seconds is required' in status:
-             error_message = f"Too many requests (Flood Wait). Please wait a moment before trying again."
-        elif 'Client not authorized' in status:
-            error_message = "Authorization for this account has expired. Please delete and re-add the account."
+        if 'No object found for' in status: error_message = f"Could not find '{chat_link}'."
+        elif 'A wait of' in status: error_message = "Flood Wait: Too many requests."
+        elif 'Client not authorized' in status: error_message = "Account auth expired. Re-add it."
         return jsonify({'status': 'error', 'message': error_message}), 500
+
+@app.route('/api/audiences/save', methods=['POST'])
+def save_audience_route():
+    filename, users = request.json.get('filename'), request.json.get('users')
+    if not filename or not users: return jsonify({'status': 'error', 'message': 'Filename and users are required.'}), 400
+    # Sanitize filename
+    safe_filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    if not safe_filename.endswith('.json'): safe_filename += '.json'
+    try:
+        with open(os.path.join(AUDIENCE_DIR, safe_filename), 'w') as f:
+            json.dump(users, f, indent=2)
+        return jsonify({'status': 'ok', 'message': f'Audience saved as {safe_filename}'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/audiences', methods=['GET'])
+def get_audiences_route():
+    try:
+        files = [f for f in os.listdir(AUDIENCE_DIR) if f.endswith('.json')]
+        return jsonify({'status': 'ok', 'audiences': files})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # --- Web Page Routes ---
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# --- Main Entry Point ---
+if __name__ == '__main__':
+    setup_directories()
+    # This part is for running with `python web_server.py` directly
+    # In a production setup, a WSGI server like Gunicorn would be used
+    app.run(debug=True, port=5000)

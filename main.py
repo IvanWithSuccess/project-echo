@@ -1,17 +1,12 @@
 
-import webbrowser
-from threading import Timer
-from project_echo import web_server
+from project_echo.web_server import app, setup_directories
 
-def open_browser():
-    # Opens the URL in a new browser tab
-    webbrowser.open_new("http://127.0.0.1:8080")
-
-if __name__ == "__main__":
-    # Run open_browser in a separate thread after a short delay
-    # to give the server time to start up.
-    Timer(1, open_browser).start()
+if __name__ == '__main__':
+    # Ensure necessary directories like 'sessions' and 'audiences' are created on startup
+    setup_directories()
     
-    # Run the Flask development server
-    web_server.app.run(host='0.0.0.0', port=8080, debug=False)
-
+    # Run the Flask web server
+    # In a real production environment, you would use a more robust WSGI server 
+    # like Gunicorn or uWSGI instead of the built-in Flask development server.
+    # Example: gunicorn --workers 4 --bind 0.0.0.0:8000 main:app
+    app.run(host='0.0.0.0', port=8000, debug=True)
