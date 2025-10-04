@@ -4,53 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Echo</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <h1>Telegram Accounts</h1>
-    <button onclick="addAccount()">Add Account</button>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Phone</th>
-                <th>Username</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody id="accounts-table-body">
-            <!-- Accounts will be loaded here -->
-        </tbody>
-    </table>
-
-    <hr>
-
-    <h2>Audience Scraper</h2>
-    <div>
-        <label for="scraper-account">Select Account to Use:</label>
-        <select id="scraper-account">
-            <!-- Account options will be loaded here -->
-        </select>
-        <br><br>
-        <label for="chat-link">Target Chat/Channel Link or Username:</label>
-        <input type="text" id="chat-link" placeholder="@channel_name or https://t.me/...">
-        <br><br>
-        <button onclick="scrapeAudience()">Start Scraping</button>
-        <p id="scraper-status"></p>
+    <div class="sidebar">
+        <h2>Project Echo</h2>
+        <nav>
+            <ul>
+                <li id="nav-dashboard" class="active" onclick="switchSection('dashboard')">Dashboard</li>
+                <li id="nav-accounts" onclick="switchSection('accounts')">Accounts Center</li>
+                <li id="nav-audiences" onclick="switchSection('audiences')">Audience CRM</li>
+                <li id="nav-campaigns" onclick="switchSection('campaigns')">Ad Cabinet</li>
+                <li id="nav-tasks" onclick="switchSection('tasks')">Task Center</li>
+                <li id="nav-settings" onclick="switchSection('settings')">Settings</li>
+            </ul>
+        </nav>
     </div>
 
-    <h3>Scraped Users</h3>
-    <button onclick="saveAudience()" id="save-audience-btn" style="display:none;">Save Audience</button>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>User ID</th>
-                <th>Username</th>
-                <th>Name</th>
-            </tr>
-        </thead>
-        <tbody id="audience-table-body">
-            <!-- Scraped users will be loaded here -->
-        </tbody>
-    </table>
+    <div class="main-content">
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="content-section active">
+            <h1>Dashboard</h1>
+            <p>Welcome to Project Echo. Here you'll find a summary of your activities.</p>
+            <!-- Statistics will go here -->
+        </div>
+
+        <!-- Accounts Center Section -->
+        <div id="accounts" class="content-section">
+            <h1>Accounts Center</h1>
+            <button onclick="addAccount()">Add New Account</button>
+            <table id="accounts-table">
+                <thead>
+                    <tr>
+                        <th>Phone</th>
+                        <th>Username</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="accounts-table-body">
+                    <!-- Accounts will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Audience CRM Section -->
+        <div id="audiences" class="content-section">
+            <h1>Audience CRM</h1>
+            
+            <h3>Scrape New Audience</h3>
+            <div>
+                <label for="scraper-account">Select Account to Use:</label><br>
+                <select id="scraper-account"></select><br>
+                
+                <label for="chat-link">Target Chat/Channel Link or Username:</label><br>
+                <input type="text" id="chat-link" placeholder="@channel_name or https://t.me/..."><br>
+                
+                <button onclick="scrapeAudience()">Start Scraping</button>
+                <p id="scraper-status"></p>
+            </div>
+
+            <h3>Scraped Users</h3>
+            <button onclick="saveAudience()" id="save-audience-btn" style="display:none;">Save Audience as CSV</button>
+            <table id="audience-table">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Username</th>
+                        <th>Name</th>
+                    </tr>
+                </thead>
+                <tbody id="audience-table-body">
+                    <!-- Scraped users will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Ad Cabinet Section -->
+        <div id="campaigns" class="content-section">
+            <h1>Ad Cabinet</h1>
+            <p>Here you will be able to create, manage, and analyze your advertising campaigns.</p>
+            <!-- Campaigns content will go here -->
+        </div>
+
+        <!-- Task Center Section -->
+        <div id="tasks" class="content-section">
+            <h1>Task Center</h1>
+            <p>Assign tasks like subscribing, liking, etc., to your accounts to warm them up.</p>
+            <!-- Tasks content will go here -->
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settings" class="content-section">
+            <h1>Settings</h1>
+            <p>Manage proxies, farming settings, and other global configurations.</p>
+            <!-- Settings content will go here -->
+        </div>
+    </div>
 
     <script src="/static/app.js"></script>
 </body>

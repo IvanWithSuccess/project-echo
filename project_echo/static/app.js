@@ -1,9 +1,27 @@
-
 let scrapedAudience = []; // Global variable to hold scraped users
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Load initial data for the default view
     loadAccounts();
 });
+
+function switchSection(sectionId) {
+    // Hide all sections
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.style.display = 'none';
+        section.classList.remove('active');
+    });
+
+    // Remove active class from all nav items
+    document.querySelectorAll('.sidebar nav li').forEach(navItem => {
+        navItem.classList.remove('active');
+    });
+
+    // Show the target section and mark nav item as active
+    document.getElementById(sectionId).style.display = 'block';
+    document.getElementById(sectionId).classList.add('active');
+    document.getElementById(`nav-${sectionId}`).classList.add('active');
+}
 
 function loadAccounts() {
     fetch('/api/accounts')
@@ -15,19 +33,19 @@ function loadAccounts() {
             scraperAccountSelect.innerHTML = '';
 
             if (data.length === 0) {
-                scraperAccountSelect.innerHTML = '<option disabled>No accounts available</option>';
+                scraperAccountSelect.innerHTML = '<option disabled selected>No accounts available</option>';
+            } else {
+                 scraperAccountSelect.innerHTML = '<option disabled selected>Select an account</option>';
             }
 
             data.forEach(account => {
-                // Populate accounts table
                 let row = `<tr>
                             <td>${account.phone}</td>
                             <td>${account.username || 'N/A'}</td>
-                            <td><button onclick="deleteAccount('${account.phone}')">Delete</button></td>
+                            <td><button class="delete-btn" onclick="deleteAccount('${account.phone}')">Delete</button></td>
                            </tr>`;
                 tableBody.innerHTML += row;
 
-                // Populate scraper account dropdown
                 let option = `<option value="${account.phone}">${account.phone} (${account.username || 'N/A'})</option>`;
                 scraperAccountSelect.innerHTML += option;
             });
@@ -38,6 +56,9 @@ function loadAccounts() {
 function addAccount() {
     const phone = prompt("Enter phone number (e.g., +1234567890):");
     if (!phone) return;
+
+    // Simple status update
+    alert("Processing... This may take a moment.");
 
     fetch('/api/accounts/add', {
         method: 'POST',
@@ -53,7 +74,7 @@ function addAccount() {
             }
         } else if (data.status === 'ok' && data.message === 'Account already authorized and added.'){
             alert('Account added successfully!');
-            loadAccounts(); // Refresh the list
+            loadAccounts();
         } else {
             alert(`Error: ${data.message}`);
         }
@@ -74,7 +95,7 @@ function finalizeConnection(phone, code, password) {
     .then(data => {
         if (data.status === 'ok' && data.message === 'Account connected successfully!') {
             alert('Account connected successfully!');
-            loadAccounts(); // Refresh the list
+            loadAccounts();
         } else if (data.status === 'ok' && data.message === '2FA password required.') {
             const password = prompt("Enter your 2FA password:");
             if (password) {
@@ -104,7 +125,7 @@ function deleteAccount(phone) {
     .then(data => {
         if (data.status === 'ok') {
             alert('Account deleted successfully!');
-            loadAccounts(); // Refresh the list
+            loadAccounts();
         } else {
             alert(`Error: ${data.message}`);
         }
@@ -121,8 +142,8 @@ function scrapeAudience() {
     const statusEl = document.getElementById('scraper-status');
     const tableBody = document.getElementById('audience-table-body');
 
-    if (!phone) {
-        alert('Please add and select an account first.');
+    if (!phone || phone === 'Select an account') {
+        alert('Please select a valid account.');
         return;
     }
     if (!chatLink) {
@@ -130,9 +151,9 @@ function scrapeAudience() {
         return;
     }
 
-    statusEl.textContent = 'Scraping in progress... Please wait.';
+    statusEl.textContent = 'Scraping in progress... This may take a while depending on the chat size.';
     tableBody.innerHTML = '';
-    scrapedAudience = []; // Clear previous results
+    scrapedAudience = [];
     document.getElementById('save-audience-btn').style.display = 'none';
 
     fetch('/api/audience/scrape', {
@@ -163,10 +184,11 @@ function populateAudienceTable(users) {
     const tableBody = document.getElementById('audience-table-body');
     tableBody.innerHTML = '';
     users.forEach(user => {
+        const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
         let row = `<tr>
                     <td>${user.id}</td>
                     <td>${user.username || 'N/A'}</td>
-                    <td>${user.first_name || ''} ${user.last_name || ''}</td>
+                    <td>${fullName || 'N/A'}</td>
                    </tr>`;
         tableBody.innerHTML += row;
     });
@@ -179,10 +201,10 @@ function saveAudience() {
     }
 
     const chatLink = document.getElementById('chat-link').value.replace(/[^a-zA-Z0-9]/g, '_');
-    const filename = `audience_${chatLink}_${new Date().toISOString().slice(0,10)}.csv`;
+    const filename = `audience_${chatLink || 'export'}_${new Date().toISOString().slice(0,10)}.csv`;
     
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "UserID,Username,FirstName,LastName\r\n"; // CSV Header
+    csvContent += "UserID,Username,FirstName,LastName\r\n";
 
     scrapedAudience.forEach(user => {
         const row = `${user.id},${user.username || ''},${user.first_name || ''},${user.last_name || ''}`;
@@ -193,7 +215,7 @@ function saveAudience() {
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", filename);
-    document.body.appendChild(link); // Required for Firefox
+    document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 }

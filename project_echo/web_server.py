@@ -48,7 +48,6 @@ async def graceful_shutdown(loop):
     for task in tasks:
         task.cancel()
     await asyncio.gather(*tasks, return_exceptions=True)
-    loop.stop()
 
 # --- API Routes ---
 
@@ -67,7 +66,7 @@ def add_account():
 
     service = TelegramService(phone, API_ID, API_HASH)
     status, phone_code_hash = loop.run_until_complete(service.start_login())
-    loop.run_until_complete(graceful_shutdown(loop)) # Graceful shutdown
+    loop.run_until_complete(graceful_shutdown(loop))
     loop.close()
 
     if status == 'CODE_SENT':
@@ -79,7 +78,7 @@ def add_account():
         asyncio.set_event_loop(loop)
         service = TelegramService(phone, API_ID, API_HASH)
         user = loop.run_until_complete(service.get_me())
-        loop.run_until_complete(graceful_shutdown(loop)) # Graceful shutdown
+        loop.run_until_complete(graceful_shutdown(loop))
         loop.close()
         if user:
              save_account(phone, user.username)
@@ -132,7 +131,7 @@ def finalize_account():
 
     finally:
         if not loop.is_closed():
-            loop.run_until_complete(graceful_shutdown(loop)) # Graceful shutdown
+            loop.run_until_complete(graceful_shutdown(loop))
             loop.close()
 
 @app.route('/api/accounts/delete', methods=['POST'])
@@ -149,13 +148,38 @@ def delete_account_route():
 
     save_accounts(updated_accounts)
 
-    # Delete the session file
     session_file = os.path.join(SESSIONS_DIR, f"{phone.replace('+', '')}.session")
     if os.path.exists(session_file):
         os.remove(session_file)
 
     return jsonify({'status': 'ok', 'message': 'Account deleted successfully.'})
 
+@app.route('/api/audience/scrape', methods=['POST'])
+def scrape_audience_route():
+    phone = request.json.get('phone')
+    chat_link = request.json.get('chat_link')
+
+    if not phone or not chat_link:
+        return jsonify({'status': 'error', 'message': 'Phone and chat link are required.'}), 400
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    service = TelegramService(phone, API_ID, API_HASH)
+    status, users = loop.run_until_complete(service.get_chat_participants(chat_link))
+    loop.run_until_complete(graceful_shutdown(loop))
+    loop.close()
+
+    if status == "SUCCESS":
+        return jsonify({'status': 'ok', 'users': users})
+    else:
+        error_message = status
+        if 'No object found for' in status:
+            error_message = f"Could not find the chat '{chat_link}'. Please check the username/link or make sure the selected account has joined it."
+        elif 'A wait of' in status and 'seconds is required' in status:
+             error_message = f"Too many requests (Flood Wait). Please wait a moment before trying again."
+        elif 'Client not authorized' in status:
+            error_message = "Authorization for this account has expired. Please delete and re-add the account."
+        return jsonify({'status': 'error', 'message': error_message}), 500
 
 # --- Web Page Routes ---
 
