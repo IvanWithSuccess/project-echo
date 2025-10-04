@@ -22,8 +22,10 @@ class ProjectEcho(toga.App):
         )
 
         # --- Content Area --- #
-        self.account_view = AccountView()
-        # self.ad_cabinet_view = AdCabinetView() # We'll use this later
+        # Pass the app instance to the view
+        self.account_view = AccountView(self)
+        # self.ad_cabinet_view = AdCabinetView(self) # We'll use this later
+        
         self.content = toga.Box(style=Pack(flex=1))
         self.content.add(self.account_view)
 
@@ -40,7 +42,10 @@ class ProjectEcho(toga.App):
         elif node and node.text == 'Ad Cabinet':
             self.content.clear()
             # self.content.add(self.ad_cabinet_view)
-            pass # We'll implement this later
+            # For now, show a placeholder
+            placeholder = toga.Box(style=Pack(padding=10))
+            placeholder.add(toga.Label('Ad Cabinet is not yet implemented.'))
+            self.content.add(placeholder)
 
 def main():
     return ProjectEcho('Project Echo', 'org.beeware.project_echo')
