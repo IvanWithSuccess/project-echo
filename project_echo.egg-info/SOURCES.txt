@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+project_echo/__init__.py
+project_echo.egg-info/PKG-INFO
+project_echo.egg-info/SOURCES.txt
+project_echo.egg-info/dependency_links.txt
+project_echo.egg-info/requires.txt
+project_echo.egg-info/top_level.txt
+project_echo/services/__init__.py
+project_echo/services/telegram_service.py
+project_echo/views/__init__.py

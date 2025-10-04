@@ -5,7 +5,7 @@ description = "Telegram management and advertising tool."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "toga>=0.4.2",
+    "flask>=3.0.0",
     "telethon>=1.34.0"
 ]
 
