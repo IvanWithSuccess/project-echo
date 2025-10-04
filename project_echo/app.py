@@ -1,7 +1,6 @@
 
 import toga
 from toga.style import Pack
-from toga.style.pack import COLUMN, ROW, LEFT, RIGHT
 
 # Import views
 from project_echo.views.account_view import AccountView
@@ -10,22 +9,24 @@ from project_echo.views.ad_cabinet_view import AdCabinetView
 class ProjectEcho(toga.App):
 
     def startup(self):
-        # Main window
+        # 1. Create the main window
         self.main_window = toga.MainWindow(title=self.formal_name, size=(800, 600))
 
-        # Main container with tabs
+        # 2. Create the tab container
         self.option_container = toga.OptionContainer()
 
-        # --- Add Views to Tabs ---
+        # 3. IMPORTANT: Assign the container to the window *before* adding content
+        self.main_window.content = self.option_container
+
+        # 4. Create the content for the tabs
         account_manager_view = AccountView(self)
         ad_cabinet_view = AdCabinetView(self)
 
-        # CORRECTED: Add tabs to the container's 'content'
-        self.option_container.content.add('Accounts', account_manager_view)
-        self.option_container.content.add('Ad Cabinet', ad_cabinet_view)
+        # 5. Now, add the tabs to the container
+        self.option_container.add('Accounts', account_manager_view)
+        self.option_container.add('Ad Cabinet', ad_cabinet_view)
 
-        # Add container to the main window
-        self.main_window.content = self.option_container
+        # 6. Show the main window
         self.main_window.show()
 
 
