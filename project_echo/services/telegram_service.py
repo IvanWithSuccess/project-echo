@@ -132,3 +132,28 @@ class TelegramService:
             await self.client.disconnect()
 
         return status, users
+    
+    async def send_message(self, user_id: int, message: str) -> str:
+        """
+        Connects, sends a message to a user, and disconnects.
+        """
+        logging.info(f"[{self.session_name}] Connecting to send message to {user_id}...")
+        await self.client.connect()
+        status = ""
+        try:
+            if not await self.client.is_user_authorized():
+                raise Exception("Client not authorized.")
+
+            # Using send_message with the user's ID
+            await self.client.send_message(user_id, message)
+            status = "SUCCESS"
+            logging.info(f"[{self.session_name}] Message successfully sent to {user_id}.")
+
+        except Exception as e:
+            logging.error(f"[{self.session_name}] Failed to send message to {user_id}: {e}")
+            status = str(e)
+        finally:
+            logging.info(f"[{self.session_name}] Disconnecting after send attempt.")
+            await self.client.disconnect()
+
+        return status

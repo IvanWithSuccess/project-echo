@@ -61,8 +61,32 @@
         <!-- Ad Cabinet Section -->
         <div id="campaigns" class="content-section">
             <h1>Ad Cabinet</h1>
-            <p>Create and manage your advertising campaigns.</p>
-            <select id="campaign-audience-select"></select>
+
+            <!-- Campaign Creation Form (Initially Hidden) -->
+            <div id="campaign-form-container" style="display: none; margin-bottom: 20px;">
+                <h3 id="campaign-form-title">Create New Campaign</h3>
+                <input type="hidden" id="campaign-id">
+                <input type="text" id="campaign-name" placeholder="Campaign Name"><br>
+                <textarea id="campaign-message" placeholder="Your message here..." rows="6"></textarea><br>
+                
+                <label for="campaign-audience-select">Select Audience:</label><br>
+                <select id="campaign-audience-select"></select><br><br>
+
+                <label>Select Sending Accounts:</label><br>
+                <div id="campaign-accounts-select" class="checkbox-container"></div><br>
+                
+                <button onclick="saveCampaign()">Save Campaign</button>
+                <button class="delete-btn" onclick="toggleCampaignForm(false)">Cancel</button>
+            </div>
+
+            <!-- Campaigns List View -->
+            <div id="campaign-list-view">
+                <button onclick="toggleCampaignForm(true)">Create New Campaign</button>
+                <table id="campaigns-table">
+                    <thead><tr><th>Name</th><th>Audience</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody id="campaigns-table-body"></tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Other Sections -->
