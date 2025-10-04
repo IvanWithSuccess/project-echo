@@ -169,5 +169,27 @@ class TelegramService:
             else:
                 logging.warning(f'Could not find account {session_name} to update.')
 
+    async def get_dialogs(self, session_name):
+            """Fetches all dialogs (chats, channels) for a given account."""
+            client = await self.get_client(session_name)
+            if not client:
+                logging.error(f'[get_dialogs] Could not get client for {session_name}')
+                return []
+            
+            dialogs = []
+            try:
+                async for dialog in client.iter_dialogs():
+                    dialogs.append({
+                        'id': dialog.id,
+                        'name': dialog.name,
+                        'is_channel': dialog.is_channel,
+                        'is_group': dialog.is_group,
+                        'is_user': dialog.is_user
+                    })
+                return dialogs
+            except Exception as e:
+                logging.error(f'[get_dialogs] Error fetching dialogs for {session_name}: {e}')
+                return []
+
 # Instantiate a singleton service
 telegram_service = TelegramService()
