@@ -43,19 +43,10 @@ def load_json(file_path, default=None):
 def save_json(file_path, data):
     with open(file_path, 'w') as f: json.dump(data, f, indent=2)
 
-# --- Specific Data Functions ---
-load_accounts = lambda: load_json(ACCOUNTS_FILE, default=[])
-save_accounts = lambda d: save_json(ACCOUNTS_FILE, d)
-load_campaigns = lambda: load_json(CAMPAIGNS_FILE, default=[])
-save_campaigns = lambda d: save_json(CAMPAIGNS_FILE, d)
-load_proxies = lambda: load_json(PROXIES_FILE, default=[])
-save_proxies = lambda d: save_json(PROXIES_FILE, d)
-load_tags = lambda: load_json(TAGS_FILE, default=[])
-save_tags = lambda d: save_json(TAGS_FILE, d)
-
-def get_account_by_phone(phone):
-    accounts = load_accounts()
-    return next((acc for acc in accounts if acc.get('phone') == phone), None)
+# --- HTML Routes ---
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 # --- API: Proxies ---
 @app.route('/api/proxies')
@@ -112,6 +103,5 @@ def delete_tag():
     tags = [t for t in load_tags() if t != tag_name]
     save_tags(tags)
     return jsonify({"status": "ok", "message": "Tag deleted"})
-
 
 # --- The rest of the web_server.py file remains the same... ---
