@@ -13,7 +13,7 @@ UPLOADS_DIR = "uploads"
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class TelegramService:
-    def __init__(self, phone: str, api_id: int, api_hash: str, system_version: str = None, proxy: dict = None):
+    def __init__(self, phone: str, api_id: int, api_hash: str, system_version: str = None, proxy: dict = None, loop=None):
         if not os.path.exists(SESSIONS_DIR): os.makedirs(SESSIONS_DIR)
         if not os.path.exists(UPLOADS_DIR): os.makedirs(UPLOADS_DIR)
         
@@ -30,7 +30,8 @@ class TelegramService:
 
         self.client = TelegramClient(session_path, self.api_id, self.api_hash,
                                    system_version=system_version or '4.16.30-vxCUSTOM',
-                                   proxy=proxy_formatted)
+                                   proxy=proxy_formatted,
+                                   loop=loop) # Pass the loop to the client
 
     async def check_proxy(self) -> bool:
         """

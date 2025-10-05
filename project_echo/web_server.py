@@ -36,12 +36,10 @@ def setup_directories():
 # --- Data Helpers ---
 def load_json(file_path, default=None):
     if not os.path.exists(file_path):
-        # Create the file with default content if it doesn't exist
         save_json(file_path, default if default is not None else [])
         return default if default is not None else []
     try:
         with open(file_path, 'r') as f: 
-            # Handle empty file case
             content = f.read()
             if not content: return default if default is not None else []
             return json.loads(content)
@@ -51,7 +49,7 @@ def load_json(file_path, default=None):
 def save_json(file_path, data):
     with open(file_path, 'w') as f: json.dump(data, f, indent=2)
 
-# --- Specific Data Functions (Defined Before Use) ---
+# --- Specific Data Functions ---
 load_accounts = lambda: load_json(ACCOUNTS_FILE, default=[])
 save_accounts = lambda d: save_json(ACCOUNTS_FILE, d)
 load_campaigns = lambda: load_json(CAMPAIGNS_FILE, default=[])
@@ -78,60 +76,19 @@ def get_accounts():
 @app.route('/api/accounts/add', methods=['POST'])
 def add_account():
     phone = request.json['phone']
-    accounts = load_accounts()
-    if any(acc['phone'] == phone for acc in accounts):
+    if any(acc['phone'] == phone for acc in load_accounts()):
         return jsonify({"message": "Account already exists."}), 400
     
-    service = TelegramService(phone, API_ID, API_HASH)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+
+    service = TelegramService(phone, API_ID, API_HASH, loop=loop)
     status, phone_code_hash = loop.run_until_complete(service.start_login())
-    loop.close()
     
     if status == 'CODE_SENT':
         pending_hashes[phone] = phone_code_hash
-        return jsonify({"message": "Verification code sent."})
+        response = {"message": "Verification code sent."}
     elif status == 'ALREADY_AUTHORIZED':
-        # This part requires a running loop to get user, so we create it again
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        user = loop.run_until_complete(service.get_me())
-        loop.close()
-        new_account = {
-            "phone": phone,
-            "username": user.username if user else 'N/A',
-            "settings": {"profile": {"first_name": user.first_name if user else '', "last_name": user.last_name if user else ''}}
-        }
-        accounts.append(new_account)
-        save_accounts(accounts)
-        return jsonify({"message": "Account added successfully (already authorized)."}), 201
-    elif 'PASSWORD_NEEDED' in status:
-        return jsonify({"message": "2FA password required."})
-    else:
-        return jsonify({"message": f"Error: {status}"}), 500
-
-@app.route('/api/accounts/finalize', methods=['POST'])
-def finalize_account():
-    data = request.json
-    phone = data['phone']
-    code = data.get('code')
-    password = data.get('password')
-    phone_code_hash = pending_hashes.get(phone)
-
-    service = TelegramService(phone, API_ID, API_HASH)
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    if password:
-        status = loop.run_until_complete(service.submit_password(password))
-    elif code and phone_code_hash:
-        status = loop.run_until_complete(service.submit_code(code, phone_code_hash))
-    else:
-        loop.close()
-        return jsonify({"message": "Code or password required."}), 400
-
-    if status == 'SUCCESS':
-        if phone in pending_hashes: del pending_hashes[phone]
         user = loop.run_until_complete(service.get_me())
         accounts = load_accounts()
         new_account = {
@@ -139,17 +96,59 @@ def finalize_account():
             "username": user.username if user else 'N/A',
             "settings": {"profile": {"first_name": user.first_name if user else '', "last_name": user.last_name if user else ''}}
         }
-        if not any(a['phone'] == phone for a in accounts):
-            accounts.append(new_account)
+        accounts.append(new_account)
         save_accounts(accounts)
+        response = {"message": "Account added successfully (already authorized)."}
+    else: # Handles errors and PASSWORD_NEEDED
+        response = {"message": f"Could not log in: {status}"}
+
+    loop.close()
+    return jsonify(response)
+
+@app.route('/api/accounts/finalize', methods=['POST'])
+def finalize_account():
+    data = request.json
+    phone = data['phone']
+    code = data.get('code')
+    password = data.get('password')
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    service = TelegramService(phone, API_ID, API_HASH, loop=loop)
+
+    if password:
+        status = loop.run_until_complete(service.submit_password(password))
+    elif code:
+        phone_code_hash = pending_hashes.get(phone)
+        if not phone_code_hash: 
+            loop.close()
+            return jsonify({"message": "Session expired, please try adding the account again."}), 400
+        status = loop.run_until_complete(service.submit_code(code, phone_code_hash))
+    else:
+        loop.close()
+        return jsonify({"message": "Code or password required."}), 400
+
+    message = f"Login failed: {status}"
+    if status == 'SUCCESS':
+        if phone in pending_hashes: del pending_hashes[phone]
+        user = loop.run_until_complete(service.get_me())
+        accounts = load_accounts()
+        if not any(a['phone'] == phone for a in accounts):
+            new_account = {
+                "phone": phone,
+                "username": user.username if user else 'N/A',
+                "settings": {"profile": {"first_name": user.first_name if user else '', "last_name": user.last_name if user else ''}}
+            }
+            accounts.append(new_account)
+            save_accounts(accounts)
         message = "Account logged in and saved successfully."
     elif status == 'PASSWORD_NEEDED':
         message = "2FA password required."
-    else:
-        message = f"Login failed: {status}"
-    
+
     loop.close()
     return jsonify({"message": message})
+
 
 @app.route('/api/accounts/delete', methods=['POST'])
 def delete_account():
@@ -167,7 +166,6 @@ def save_account_settings():
     accounts = load_accounts()
     for acc in accounts:
         if acc['phone'] == phone:
-            # Merge settings to not lose keys
             acc.setdefault('settings', {}).update(settings)
             break
     save_accounts(accounts)
@@ -180,9 +178,10 @@ def update_account_profile():
     account = get_account_by_phone(phone)
     if not account: return jsonify({"message": "Account not found"}), 404
 
-    service = TelegramService(phone, API_ID, API_HASH, proxy=account.get('settings', {}).get('proxy'))
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+
+    service = TelegramService(phone, API_ID, API_HASH, loop=loop, proxy=account.get('settings', {}).get('proxy'))
     status = loop.run_until_complete(service.update_profile(
         first_name=profile_data.get('first_name'),
         last_name=profile_data.get('last_name'),
@@ -230,9 +229,10 @@ def delete_proxy():
 @app.route('/api/proxies/check', methods=['POST'])
 def check_proxy():
     proxy = request.json
-    service = TelegramService(phone="proxy_check", api_id=API_ID, api_hash=API_HASH, proxy=proxy)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+
+    service = TelegramService(phone="proxy_check", api_id=API_ID, api_hash=API_HASH, proxy=proxy, loop=loop)
     is_working = loop.run_until_complete(service.check_proxy())
     loop.close()
     status = 'working' if is_working else 'not working'
