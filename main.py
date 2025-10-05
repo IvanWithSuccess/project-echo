@@ -1,15 +1,25 @@
 
 from kivy.lang import Builder
 from kivymd.app import MDApp
-
-# --- Import the custom screen and new Tab components ---
-from project_echo.screens.accounts_screen import AccountsPanel
-# FIX: Corrected the import paths to the actual submodule based on file listing
-from kivymd.uix.tab.tab import MDTabs, MDTabsItem
+from kivymd.uix.tab import MDTabsBase
+from kivy.uix.floatlayout import FloatLayout
 from kivymd.uix.label import MDLabel
 
-# --- Load the KV file for the Accounts screen ---
+# Import our custom screen content
+from project_echo.screens.accounts_screen import AccountsPanel
+
+# Load the KV file for the accounts screen widget
 Builder.load_file("project_echo/screens/accounts_screen.kv")
+
+
+# =========================================================================
+# >> TAB CONTENT CLASS (KivyMD 1.2.0 Style)
+# =========================================================================
+
+class Tab(FloatLayout, MDTabsBase):
+    """ Class for the content of a single tab. KivyMD 1.2.0 uses the
+        MDTabsBase mixin to link this content to a tab button. """
+    pass
 
 
 # =========================================================================
@@ -19,23 +29,12 @@ Builder.load_file("project_echo/screens/accounts_screen.kv")
 class ProjectEchoApp(MDApp):
     """The main application class."""
 
-    # Define the main KV string for the application's root widget
-    KV = """
-MDBoxLayout:
-    orientation: "vertical"
-
-    MDTopAppBar:
-        title: "Project Echo"
-
-    MDTabs:
-        id: tabs
-"""
-
     def build(self):
-        """Initializes the application and returns the root widget."""
+        """Initializes the application and returns the root widget.
+           The root widget is defined in 'main.kv'."""
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
-        return Builder.load_string(self.KV)
+        return Builder.load_file('main.kv')
 
     def on_start(self):
         """Populate the tabs with their respective content after the app starts."""
@@ -44,20 +43,22 @@ MDBoxLayout:
             "Dashboard": "view-dashboard",
             "Campaigns": "bullhorn",
         }
-        for tab_name, icon_name in tabs_data.items():
-            # Create the tab item with text and icon
-            item = MDTabsItem(text=tab_name, icon=icon_name)
 
-            # Add the appropriate content to the tab item
-            if tab_name == "Accounts":
-                item.add_widget(AccountsPanel())
+        for title, icon in tabs_data.items():
+            # Create an instance of our Tab content class
+            tab_content = Tab(title=title, icon=icon)
+
+            # Add the appropriate content widget to the tab
+            if title == "Accounts":
+                tab_content.add_widget(AccountsPanel())
             else:
-                item.add_widget(MDLabel(
-                    text=f"{tab_name} content will be here",
+                tab_content.add_widget(MDLabel(
+                    text=f"{title} content will be here",
                     halign="center"
                 ))
-            # Add the fully constructed tab item to the tabs container
-            self.root.ids.tabs.add_widget(item)
+
+            # Add the tab content to the main MDTabs widget
+            self.root.ids.tabs.add_widget(tab_content)
 
 
 # ==========================================================================

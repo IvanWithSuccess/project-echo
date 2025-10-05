@@ -1,49 +1,30 @@
-
 from kivy.uix.boxlayout import BoxLayout
-from kivymd.uix.menu import MDDropdownMenu
+from kivymd.uix.list import OneLineIconListItem
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.button import MDFlatButton
+
+
+# =========================================================================
+# >> ACCOUNTS PANEL WIDGET
+# =========================================================================
 
 class AccountsPanel(BoxLayout):
-    """
-    Content for the 'Accounts' tab. The UI for this widget is defined in the
-    corresponding `accounts_screen.kv` file.
-    """
+    """ Widget that holds the UI for the 'Accounts' tab. """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.menu = None  # To hold the MDDropdownMenu instance
+        # Populate the list on initialization (example)
+        self.add_account("Initial Account 1")
+        self.add_account("Initial Account 2")
 
-    def on_kv_post(self, base_widget):
-        """
-        This Kivy method is called after the .kv file has been loaded.
-        It's the perfect place to create the dropdown menu.
-        """
-        # FIX: The on_release lambda now needs to be wrapped in a list in KivyMD 2.0
-        menu_items = [
-            {
-                "text": "Any Status",
-                "on_release": lambda x="Any Status": self.set_status(x),
-            },
-            {
-                "text": "Active",
-                "on_release": lambda x="Active": self.set_status(x),
-            },
-            {
-                "text": "Inactive",
-                "on_release": lambda x="Inactive": self.set_status(x),
-            },
-        ]
+    def add_account(self, account_name=None):
+        """ Adds a new account item to the list. 
+            If account_name is None, it will show a dialog (not implemented)."""
+        if account_name is None:
+            # This is where you would open a dialog to get the account name
+            print("Add account dialog should open here.")
+            return
 
-        self.menu = MDDropdownMenu(
-            caller=self.ids.status_button,
-            items=menu_items,
-        )
-
-    def open_status_menu(self):
-        """Opens the status filter dropdown menu."""
-        if self.menu:
-            self.menu.open()
-
-    def set_status(self, text_item):
-        """Sets the text of the status button and closes the menu."""
-        if self.menu:
-            self.ids.status_button.text = text_item
-            self.menu.dismiss()
+        # Create a new list item and add it to the MDList
+        item = OneLineIconListItem(text=account_name)
+        self.ids.account_list.add_widget(item)

@@ -1,35 +1,25 @@
+<AccountsPanel>
+    MDBoxLayout:
+        orientation: 'vertical'
+        padding: dp(10)
+        spacing: dp(10)
 
-# Declares that this is the UI for the AccountsPanel class
-<AccountsPanel>:
-    orientation: 'vertical'
-    padding: [20, 20, 20, 20]
-    spacing: 20
+        # --- Header with Title and Add Button ---
+        MDBoxLayout:
+            adaptive_height: True
+            spacing: dp(10)
 
-    # --- Toolbar ---
-    BoxLayout:
-        size_hint_y: None
-        height: 48
-        spacing: 10
+            MDLabel:
+                text: "Accounts"
+                font_style: "H6"
+                adaptive_height: True
 
-        # FIX: Replaced deprecated MDFillRoundFlatButton with MDButton
-        MDButton:
-            style: "filled"
-            text: "CREATE ACCOUNT"
-            icon: "plus"
-            pos_hint: {"center_y": 0.5}
+            MDIconButton:
+                icon: 'plus'
+                # FIX: Removed `style="standard"` which is not available in KivyMD 1.2.0
+                on_release: root.add_account()
 
-        # Spacer
-        BoxLayout:
-
-        # FIX: Replaced deprecated MDFlatButton with MDButton
-        MDButton:
-            id: status_button
-            style: "text"
-            text: "ANY STATUS"
-            pos_hint: {"center_y": 0.5}
-            on_release: root.open_status_menu()
-
-    # --- Data Table Placeholder ---
-    MDLabel:
-        text: "Accounts data table will be here"
-        halign: "center"
+        # --- Scrollable List of Accounts ---
+        ScrollView:
+            MDList:
+                id: account_list
