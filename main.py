@@ -1,25 +1,92 @@
-import os
-from project_echo.web_server import app, setup_directories
-import webbrowser
-import threading
+
+import kivy
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.uix.spinner import Spinner
+
+kivy.require('2.1.0') # Ensure compatibility
 
 # ==========================================================================
-# >> CONFIGURATION
+# >> KIVY WIDGETS & LAYOUTS
 # ==========================================================================
-HOST = "127.0.0.1"
-PORT = 5000
-URL = f"http://{HOST}:{PORT}"
+
+class AccountsPanel(BoxLayout):
+    """Content for the 'Accounts' tab."""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.padding = [10, 10, 10, 10]
+        self.spacing = 10
+
+        # --- Toolbar ---
+        toolbar = BoxLayout(size_hint_y=None, height=48, spacing=10)
+        
+        # 'Create Account' Button
+        create_button = Button(text='Create Account', size_hint_x=None, width=150)
+        toolbar.add_widget(create_button)
+
+        # Spacer
+        toolbar.add_widget(BoxLayout()) # This pushes the filter to the right
+
+        # Status Filter
+        status_filter = Spinner(
+            text='Any Status',
+            values=('Any Status', 'Active', 'Inactive'),
+            size_hint_x=None,
+            width=150
+        )
+        toolbar.add_widget(status_filter)
+        self.add_widget(toolbar)
+
+        # --- Data Table Placeholder ---
+        table_placeholder = Label(text='Accounts data table will be here.')
+        self.add_widget(table_placeholder)
+
+
+class MainAppLayout(BoxLayout):
+    """The root widget of the application."""
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+
+        # Create the main tabbed panel
+        tab_panel = TabbedPanel(do_default_tab=False)
+
+        # --- Accounts Tab (Set as default) ---
+        accounts_tab = TabbedPanelItem(text='Accounts')
+        accounts_tab.add_widget(AccountsPanel())
+        tab_panel.add_widget(accounts_tab)
+        tab_panel.switch_to(accounts_tab) # Make it the default
+
+        # --- Dashboard Tab ---
+        dashboard_tab = TabbedPanelItem(text='Dashboard')
+        dashboard_tab.add_widget(Label(text='Dashboard content will be here.'))
+        tab_panel.add_widget(dashboard_tab)
+
+        # --- Campaigns Tab ---
+        campaigns_tab = TabbedPanelItem(text='Campaigns')
+        campaigns_tab.add_widget(Label(text='Campaigns content will be here.'))
+        tab_panel.add_widget(campaigns_tab)
+
+        self.add_widget(tab_panel)
+
+# ==========================================================================
+# >> KIVY APP CLASS
+# ==========================================================================
+
+class ProjectEchoApp(App):
+    def build(self):
+        self.title = 'Project Echo'
+        return MainAppLayout()
 
 # ==========================================================================
 # >> MAIN EXECUTION
 # ==========================================================================
+
 if __name__ == '__main__':
-    # Ensure necessary directories exist before starting
-    setup_directories()
-
-    # DEFINITIVE FIX: Use open_new_tab() to explicitly open a new tab.
-    threading.Timer(1, lambda: webbrowser.open_new_tab(URL)).start()
-
-    # Run the Flask web server
-    # use_reloader=False is important to prevent the script from running twice
-    app.run(host=HOST, port=PORT, debug=True, use_reloader=False)
+    # Note: setup_directories() from the old web server is no longer needed
+    # unless we decide to save/load files from specific Kivy-related paths.
+    ProjectEchoApp().run()
