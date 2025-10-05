@@ -6,7 +6,7 @@ import logging
 import random
 import uuid
 import threading
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_from_directory
 from werkzeug.utils import secure_filename
 from project_echo.services.telegram_service import TelegramService
 
@@ -67,6 +67,10 @@ def get_account_by_phone(phone):
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(UPLOADS_DIR, filename)
 
 # --- API: Accounts ---
 @app.route('/api/accounts')
@@ -258,10 +262,86 @@ def delete_tag():
     tag_name = request.json.get('name')
     tags = [t for t in load_tags() if t != tag_name]
     save_tags(tags)
+    # Also remove the tag from all accounts that use it
+    accounts = load_accounts()
+    for acc in accounts:
+        if 'tags' in acc.get('settings', {}) and tag_name in acc['settings']['tags']:
+            acc['settings']['tags'].remove(tag_name)
+    save_accounts(accounts)
     return jsonify({"status": "ok", "message": "Tag deleted"})
+
+# --- API: Audiences ---
+@app.route('/api/audiences/scrape', methods=['POST'])
+def scrape_audience():
+    data = request.json
+    phone = data.get('phone')
+    chat_link = data.get('chat_link')
+    
+    account = get_account_by_phone(phone)
+    if not account: return jsonify({"status": "error", "message": "Account not found"}), 404
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    service = TelegramService(
+        phone,
+        API_ID, 
+        API_HASH, 
+        loop=loop,
+        proxy=account.get('settings', {}).get('proxy'),
+        system_version=account.get('settings', {}).get('user_agent')
+    )
+    
+    status, users = loop.run_until_complete(service.get_chat_participants(chat_link))
+    loop.close()
+
+    if status == 'SUCCESS':
+        return jsonify({"status": "ok", "users": users})
+    else:
+        return jsonify({"status": "error", "message": status}), 500
+
+@app.route('/api/audiences', methods=['GET'])
+def list_audiences():
+    if not os.path.exists(AUDIENCE_DIR): return jsonify([])
+    files = [f for f in os.listdir(AUDIENCE_DIR) if f.endswith('.json')]
+    return jsonify(files)
+
+@app.route('/api/audiences/save', methods=['POST'])
+def save_audience():
+    data = request.json
+    name = data.get('name')
+    users = data.get('users')
+    if not name or not users:
+        return jsonify({"status": "error", "message": "Name and users are required"}), 400
+
+    filename = secure_filename(name) + '.json'
+    filepath = os.path.join(AUDIENCE_DIR, filename)
+    save_json(filepath, users)
+    return jsonify({"status": "ok", "message": f"Audience '{name}' saved successfully.", "filename": filename})
+
+@app.route('/api/audiences/<filename>', methods=['GET'])
+def get_audience(filename):
+    safe_filename = secure_filename(filename)
+    filepath = os.path.join(AUDIENCE_DIR, safe_filename)
+    if not os.path.exists(filepath): 
+        return jsonify({"status": "error", "message": "File not found"}), 404
+    return jsonify(load_json(filepath))
+
+@app.route('/api/audiences/delete', methods=['POST'])
+def delete_audience():
+    filename = request.json.get('filename')
+    if not filename: return jsonify({"status": "error", "message": "Filename is required"}), 400
+
+    safe_filename = secure_filename(filename)
+    filepath = os.path.join(AUDIENCE_DIR, safe_filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+        return jsonify({"status": "ok", "message": "Audience deleted."})
+    else:
+        return jsonify({"status": "error", "message": "File not found"}), 404
 
 
 # --- Main Execution ---
 if __name__ == '__main__':
     setup_directories()
-    app.run(debug=True)
+    app.run(debug=True, threaded=True) # Use threaded mode for handling concurrent requests

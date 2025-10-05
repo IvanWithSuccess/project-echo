@@ -155,8 +155,39 @@
 
             <!-- Audience CRM Section -->
             <div id="audiences" class="content-section">
-                 <div class="section-header"><h1>Audience CRM</h1></div>
-                 <!-- Coming soon -->
+                <div class="section-header"><h1>Audience CRM</h1></div>
+                <div class="form-section card">
+                    <h3>Scrape New Audience</h3>
+                    <div class="form-grid-responsive">
+                        <md-outlined-select id="scraper-account-select" label="Account for scraping">
+                            <md-select-option></md-select-option>
+                        </md-outlined-select>
+                        <md-outlined-text-field id="scraper-chat-link" label="Public chat link (t.me/chat)"></md-outlined-text-field>
+                        <md-filled-button onclick="scrapeAudience()">
+                            Scrape Users
+                            <span slot="icon" class="material-symbols-outlined">psychology</span>
+                        </md-filled-button>
+                    </div>
+                    <p id="scraper-status"></p>
+                </div>
+                
+                <div id="audience-results-container" style="display: none;">
+                    <h3>Scraping Results</h3>
+                    <div class="form-actions">
+                        <md-outlined-text-field id="save-audience-name" label="Audience Name"></md-outlined-text-field>
+                        <md-filled-button onclick="saveAudience()">
+                            Save Audience
+                            <span slot="icon" class="material-symbols-outlined">save</span>
+                        </md-filled-button>
+                    </div>
+                    <table class="data-table">
+                        <thead><tr><th>ID</th><th>Username</th><th>Name</th><th>Phone</th></tr></thead>
+                        <tbody id="audience-table-body"></tbody>
+                    </table>
+                </div>
+
+                <h3>Saved Audiences</h3>
+                <div id="saved-audiences-list" class="list-container"></div>
             </div>
 
             <!-- Ad Cabinet Section -->

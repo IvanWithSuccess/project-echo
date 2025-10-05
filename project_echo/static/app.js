@@ -1,1 +1,494 @@
-let currentAccount = null; // Holds the account object being edited\n\ndocument.addEventListener(\'DOMContentLoaded\', () => {\n    // Set up initial state\n    switchSection(\'dashboard\');\n    setupTabListeners();\n});\n\nfunction setupTabListeners() {\n    const accountTabs = document.querySelector(\'#account-settings md-tabs\');\n    accountTabs.addEventListener(\'change\', (event) => {\n        const activeTabId = accountTabs.activeTab.id;\n        document.querySelectorAll(\'#account-settings .tab-panel\').forEach(p => p.classList.remove(\'active\'));\n        \n        if (activeTabId === \'tab-main-settings\') {\n            document.getElementById(\'main-settings-panel\').classList.add(\'active\');\n        } else if (activeTabId === \'tab-proxy-settings\') {\n            document.getElementById(\'proxy-settings-panel\').classList.add(\'active\');\n        }\n    });\n}\n\n// --- Page & Section Navigation ---\n\nfunction switchSection(sectionId) {\n    document.querySelectorAll(\'.content-section\').forEach(s => s.style.display = \'none\');\n    document.querySelectorAll(\'.nav-item\').forEach(i => i.classList.remove(\'active\'));\n\n    const section = document.getElementById(sectionId);\n    if(section) section.style.display = \'block\';\n\n    const navItem = document.getElementById(`nav-${sectionId}`) || document.getElementById(`nav-${sectionId.split(\'-\')[0]}`);\n    if(navItem) navItem.classList.add(\'active\');\n\n    // Load data for the activated section\n    if (sectionId === \'accounts\') loadAccounts();\n    if (sectionId === \'proxies\') loadProxies();\n    // Stubs for not-yet-implemented sections\n    if (sectionId === \'audiences\') {}\n    if (sectionId === \'campaigns\') {}\n}\n\nfunction showAccountSettingsPage(account) {\n    currentAccount = account; \n    switchSection(\'account-settings\'); \n    document.getElementById(\'settings-account-display-phone\').innerText = account.phone;\n    \n    const settings = account.settings || {};\n    const profile = settings.profile || {};\n\n    // Populate Main Settings\n    document.getElementById(\'account-first-name\').value = profile.first_name || \'\';\n    document.getElementById(\'account-last-name\').value = profile.last_name || \'\';\n    document.getElementById(\'account-bio\').value = profile.bio || \'\';\n    document.getElementById(\'account-user-agent-input\').value = settings.user_agent || \'\';\n\n    const avatarPreview = document.getElementById(\'avatar-preview\');\n    const avatarPathInput = document.getElementById(\'account-avatar-path\');\n    avatarPathInput.value = profile.avatar_path || \'\';\n    if (profile.avatar_path && profile.avatar_path !== \'None\') {\n        // Assuming uploads are served from a known directory\n        avatarPreview.src = `/uploads/${profile.avatar_path.split(\'/\').pop()}`;\n        avatarPreview.style.display = \'block\';\n    } else {\n        avatarPreview.style.display = \'none\';\n    }\n\n    // Set the active tab to Main Settings\n    const accountTabs = document.querySelector(\'#account-settings md-tabs\');\n    accountTabs.activeTabIndex = 0;\n    document.querySelectorAll(\'#account-settings .tab-panel\').forEach(p => p.classList.remove(\'active\'));\n    document.getElementById(\'main-settings-panel\').classList.add(\'active\');\n\n    // Populate Proxy Dropdown\n    populateProxyDropdown(settings.proxy ? settings.proxy.id : null);\n}\n\nfunction showMainAccountsPage() {\n    currentAccount = null;\n    switchSection(\'accounts\');\n}\n\n// --- Generic API Helper ---\nfunction apiPost(endpoint, body, callback) {\n    fetch(endpoint, {\n        method: \'POST\',\n        headers: { \'Content-Type\': \'application/json\' },\n        body: JSON.stringify(body)\n    })\n    .then(response => {\n        if (!response.ok) {\n            throw new Error(`HTTP error! status: ${response.status}`);\n        }\n        return response.json();\n    })\n    .then(data => {\n        if(data.message) alert(data.message);\n        if (callback) callback(data);\n    })\n    .catch(error => {\n        console.error(`API Error at ${endpoint}:`, error);\n        alert(`An error occurred. See console for details.`);\n    });\n}\n\n// --- Accounts Center ---\n\nfunction loadAccounts() {\n    fetch(\'/api/accounts\').then(r => r.json()).then(accounts => {\n        const tableBody = document.getElementById(\'accounts-table-body\');\n        tableBody.innerHTML = \'\';\n        accounts.forEach(acc => {\n            const tagsHtml = (acc.settings?.tags || []).map(t => `<div class=\"tag-chip\">${t}</div>`).join(\'\');\n            const row = document.createElement(\'tr\');\n            // Use JSON.stringify to safely pass the account object\n            row.innerHTML = `\n                <td>${acc.phone}</td>\n                <td>${acc.username || \'N/A\'}</td>\n                <td><div class=\"tag-chip-container\">${tagsHtml}</div></td>\n                <td>\n                    <md-text-button onclick=\'showAccountSettingsPage(${JSON.stringify(acc).replace(/\"/g, \"&\quot;\")})\'>Settings</md-text-button>\n                    <md-text-button onclick=\"deleteAccount(\'${acc.phone}\')\">Delete</md-text-button>\n                </td>\n            `;\n            tableBody.appendChild(row);\n        });\n    });\n}\n\nfunction addAccount() {\n    const phone = prompt(\'Enter phone number (e.g., +1234567890):\');\n    if (!phone) return;\n\n    apiPost(\'/api/accounts/add\', { phone }, data => {\n        if (data.message.includes(\'code sent\')) {\n            const code = prompt(\'Enter verification code:\');\n            if (code) {\n                apiPost(\'/api/accounts/finalize\', { phone, code }, finalizeData => {\n                     if (finalizeData.message.includes(\'password required\')) {\n                        const password = prompt(\'Enter 2FA password:\');\n                        if(password) apiPost(\'/api/accounts/finalize\', { phone, password }, () => loadAccounts());\n                    } else {\n                        loadAccounts();\n                    }\n                });\n            }\n        } else if (data.message.includes(\'password required\')) {\n             const password = prompt(\'Enter 2FA password:\');\n             if(password) apiPost(\'/api/accounts/finalize\', { phone, password }, () => loadAccounts());\n        } else {\n             loadAccounts();\n        }\n    });\n}\n\nfunction deleteAccount(phone) {\n    if (confirm(`Delete account ${phone}? This also deletes the session file.`)) {\n        apiPost(\'/api/accounts/delete\', { phone }, () => loadAccounts());\n    }\n}\n\n// --- Account Settings ---\n\nfunction handleAvatarUpload() {\n    const input = document.getElementById(\'avatar-upload-input\');\n    const file = input.files[0];\n    if (!file) return;\n\n    const formData = new FormData();\n    formData.append(\'avatar\', file);\n\n    fetch(\'/api/accounts/upload_avatar\', { method: \'POST\', body: formData })\n    .then(r => r.json())\n    .then(data => {\n        if (data.status === \'ok\') {\n            document.getElementById(\'account-avatar-path\').value = data.path;\n            const avatarPreview = document.getElementById(\'avatar-preview\');\n            avatarPreview.src = URL.createObjectURL(file);\n            avatarPreview.style.display = \'block\';\n            alert(\'Avatar uploaded. Save settings to confirm.\');\n        } else {\n            alert(`Upload failed: ${data.message}`);\n        }\n    });\n}\n\nfunction generateUserAgent() {\n    const os = document.getElementById(\'ua-os\').value;\n    const chromeVersion = document.getElementById(\'ua-chrome-version\').value;\n    document.getElementById(\'account-user-agent-input\').value = \n        `Mozilla/5.0 (${os}; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`;\n}\n\nasync function saveAccountSettings() {\n    if (!currentAccount) return alert(\'No account selected.\');\n\n    const phone = currentAccount.phone;\n    const proxySelect = document.getElementById(\'account-proxy-select\');\n    const selectedProxyId = proxySelect.value;\n    \n    // Fetch the full proxy object\n    const proxiesResponse = await fetch(\'/api/proxies\');\n    const proxies = await proxiesResponse.json();\n    const selectedProxy = proxies.find(p => p.id === selectedProxyId) || null;\n\n    const settings = {\n        ...currentAccount.settings, // Preserve existing settings like tags\n        profile: {\n            first_name: document.getElementById(\'account-first-name\').value,\n            last_name: document.getElementById(\'account-last-name\').value,\n            bio: document.getElementById(\'account-bio\').value,\n            avatar_path: document.getElementById(\'account-avatar-path\').value,\n        },\n        user_agent: document.getElementById(\'account-user-agent-input\').value,\n        proxy: selectedProxy,\n    };\n\n    apiPost(\'/api/accounts/settings\', { phone, settings }, (data) => {\n        if (data.status === \'ok\') {\n            currentAccount.settings = settings; // Update local object\n        }\n    });\n}\n\nfunction applyProfileChanges() {\n     if (!currentAccount) return alert(\'No account selected.\');\n     apiPost(\'/api/accounts/profile\', {\n         phone: currentAccount.phone,\n         profile: {\n            first_name: document.getElementById(\'account-first-name\').value,\n            last_name: document.getElementById(\'account-last-name\').value,\n            bio: document.getElementById(\'account-bio\').value,\n            avatar_path: document.getElementById(\'account-avatar-path\').value,\n        }\n    });\n}\n\nasync function populateProxyDropdown(selectedProxyId) {\n    const select = document.getElementById(\'account-proxy-select\');\n    select.innerHTML = \'<md-select-option value=\"\"></md-select-option>\'; // \"No Proxy\" option\n    try {\n        const response = await fetch(\'/api/proxies\');\n        const proxies = await response.json();\n        proxies.forEach(p => {\n            const option = document.createElement(\'md-select-option\');\n            option.value = p.id;\n            option.innerText = `${p.host}:${p.port}`;\n            if (p.id === selectedProxyId) {\n                option.selected = true;\n            }\n            select.appendChild(option);\n        });\n    } catch (error) { console.error(\"Couldn\'t load proxies for dropdown:\", error); }\n}\n\n// --- Proxy Manager ---\n\nfunction loadProxies() {\n    fetch(\'/api/proxies\').then(r => r.json()).then(proxies => {\n        const tableBody = document.getElementById(\'proxies-table-body\');\n        tableBody.innerHTML = \'\';\n        if (!proxies) return;\n        proxies.forEach(p => {\n            const row = document.createElement(\'tr\');\n            row.id = `proxy-${p.id}`;\n            row.innerHTML = `\n                <td>${p.host}</td>\n                <td>${p.port}</td>\n                <td>${p.user || \'N/A\'}</td>\n                <td class=\"proxy-status\">Not Checked</td>\n                <td>\n                    <md-text-button onclick=\"checkProxy(\'${p.id}\')\">Check</md-text-button>\n                    <md-text-button onclick=\"deleteProxy(\'${p.id}\')\">Delete</md-text-button>\n                </td>\n            `;\n            tableBody.appendChild(row);\n        });\n    }).catch(e => console.error(\'Failed to load proxies:\', e));\n}\n\nfunction addProxy() {\n    const proxyData = {\n        type: document.getElementById(\'proxy-add-type\').value,\n        host: document.getElementById(\'proxy-add-host\').value,\n        port: parseInt(document.getElementById(\'proxy-add-port\').value, 10),\n        user: document.getElementById(\'proxy-add-user\').value,\n        pass: document.getElementById(\'proxy-add-pass\').value\n    };\n    if (!proxyData.host || !proxyData.port) return alert(\'Host and Port are required.\');\n\n    apiPost(\'/api/proxies/add\', proxyData, (data) => {\n        if (data.status === \'ok\') {\n            loadProxies();\n            // Clear form\n            document.getElementById(\'proxy-add-host\').value = \'\';\n            document.getElementById(\'proxy-add-port\').value = \'\';\n            document.getElementById(\'proxy-add-user\').value = \'\';\n            document.getElementById(\'proxy-add-pass\').value = \'\';\n        }\n    });\n}\n\nfunction deleteProxy(proxyId) {\n    if (confirm(\'Are you sure you want to delete this proxy?\')) {\n        apiPost(\'/api/proxies/delete\', { id: proxyId }, (data) => {\n            if (data.status === \'ok\') loadProxies();\n        });\n    }\n}\n\nasync function checkProxy(proxyId) {\n    const statusCell = document.querySelector(`#proxy-${proxyId} .proxy-status`);\n    if (!statusCell) return;\n    statusCell.textContent = \'Checking...\';\n    statusCell.className = \'proxy-status\'; // Reset class\n\n    try {\n        const proxiesResponse = await fetch(\'/api/proxies\');\n        const proxies = await proxiesResponse.json();\n        const proxyToCheck = proxies.find(p => p.id === proxyId);\n\n        if (!proxyToCheck) return statusCell.textContent = \'Error: Not Found\';\n\n        apiPost(\'/api/proxies/check\', proxyToCheck, (data) => {\n            statusCell.textContent = data.proxy_status || \'Error\';\n            statusCell.classList.add(data.proxy_status === \'working\' ? \'working\' : \'not-working\');\n        });\n    } catch (e) {\n        statusCell.textContent = \'Error\';\n    }\n}\n\n// --- Tags Dialog ---\nconst tagsDialog = document.getElementById(\'tags-dialog\');\n\nfunction openTagsDialog() {\n    loadTags();\n    tagsDialog.show();\n}\n\nfunction loadTags() {\n    const container = document.getElementById(\'tags-list\');\n    container.innerHTML = \'Loading...\';\n    fetch(\'/api/tags\').then(r => r.json()).then(tags => {\n        container.innerHTML = \'\';\n        if (!tags) return;\n        tags.forEach(tag => {\n            const tagEl = document.createElement(\'div\');\n            tagEl.className = \'tag-item\';\n            tagEl.innerHTML = `\n                <span>${tag}</span>\n                <md-icon-button onclick=\"deleteTag(\'${tag}\')\">\n                    <span class=\"material-symbols-outlined\">delete</span>\n                </md-icon-button>\n            `;\n            container.appendChild(tagEl);\n        });\n    }).catch(e => {\n        container.innerHTML = \'Failed to load tags.\';\n        console.error(\'Failed to load tags:\', e);\n    });\n}\n\nfunction addTag() {\n    const nameInput = document.getElementById(\'tag-add-name\');\n    const name = nameInput.value.trim();\n    if (!name) return;\n    apiPost(\'/api/tags/add\', { name }, (data) => {\n        if (data.status === \'ok\') {\n            loadTags(); // Refresh the list in the dialog\n            nameInput.value = \'\';\n        }\n    });\n}\n\nfunction deleteTag(tagName) {\n    if (confirm(`Delete the tag \"${tagName}\"? This will remove it from all accounts.`)) {\n        apiPost(\'/api/tags/delete\', { name: tagName }, (data) => {\n            if (data.status === \'ok\') {\n                loadTags(); // Refresh the dialog list\n                loadAccounts(); // Refresh the accounts table to show tag removal\n            }\n        });\n    }\n}\n
+let currentAccount = null; // Holds the account object being edited
+let scrapedAudience = []; // Holds the result of a scrape before saving
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Set up initial state
+    switchSection('dashboard');
+    setupTabListeners();
+});
+
+function setupTabListeners() {
+    const accountTabs = document.querySelector('#account-settings md-tabs');
+    accountTabs.addEventListener('change', (event) => {
+        const activeTabId = accountTabs.activeTab.id;
+        document.querySelectorAll('#account-settings .tab-panel').forEach(p => p.classList.remove('active'));
+        
+        if (activeTabId === 'tab-main-settings') {
+            document.getElementById('main-settings-panel').classList.add('active');
+        } else if (activeTabId === 'tab-proxy-settings') {
+            document.getElementById('proxy-settings-panel').classList.add('active');
+        }
+    });
+}
+
+// --- Page & Section Navigation ---
+
+function switchSection(sectionId) {
+    document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+
+    const section = document.getElementById(sectionId);
+    if(section) section.style.display = 'block';
+
+    const navItem = document.getElementById(`nav-${sectionId}`) || document.getElementById(`nav-${sectionId.split('-')[0]}`);
+    if(navItem) navItem.classList.add('active');
+
+    // Load data for the activated section
+    if (sectionId === 'accounts') loadAccounts();
+    if (sectionId === 'proxies') loadProxies();
+    if (sectionId === 'audiences') { 
+        loadAccountsForScraper(); 
+        loadAndDisplayAudiences();
+    }
+    if (sectionId === 'campaigns') {}
+}
+
+function showAccountSettingsPage(account) {
+    currentAccount = account; 
+    switchSection('account-settings'); 
+    document.getElementById('settings-account-display-phone').innerText = account.phone;
+    
+    const settings = account.settings || {};
+    const profile = settings.profile || {};
+
+    // Populate Main Settings
+    document.getElementById('account-first-name').value = profile.first_name || '';
+    document.getElementById('account-last-name').value = profile.last_name || '';
+    document.getElementById('account-bio').value = profile.bio || '';
+    document.getElementById('account-user-agent-input').value = settings.user_agent || '';
+
+    const avatarPreview = document.getElementById('avatar-preview');
+    const avatarPathInput = document.getElementById('account-avatar-path');
+    avatarPathInput.value = profile.avatar_path || '';
+    if (profile.avatar_path && profile.avatar_path !== 'None') {
+        avatarPreview.src = `/uploads/${profile.avatar_path.split('/').pop()}`;
+        avatarPreview.style.display = 'block';
+    } else {
+        avatarPreview.style.display = 'none';
+    }
+
+    const accountTabs = document.querySelector('#account-settings md-tabs');
+    accountTabs.activeTabIndex = 0;
+    document.querySelectorAll('#account-settings .tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('main-settings-panel').classList.add('active');
+
+    populateProxyDropdown(settings.proxy ? settings.proxy.id : null);
+}
+
+function showMainAccountsPage() {
+    currentAccount = null;
+    switchSection('accounts');
+}
+
+// --- Generic API Helper ---
+function apiPost(endpoint, body, callback) {
+    fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    })
+    .then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+             // Use the message from the server-side error
+            throw new Error(data.message || `HTTP error! status: ${response.status}`);
+        }
+        return data;
+    })
+    .then(data => {
+        if(data.message) alert(data.message);
+        if (callback) callback(data);
+    })
+    .catch(error => {
+        console.error(`API Error at ${endpoint}:`, error);
+        alert(error.message);
+    });
+}
+
+
+// --- Accounts Center ---
+
+function loadAccounts() {
+    fetch('/api/accounts').then(r => r.json()).then(accounts => {
+        const tableBody = document.getElementById('accounts-table-body');
+        tableBody.innerHTML = '';
+        accounts.forEach(acc => {
+            const tagsHtml = (acc.settings?.tags || []).map(t => `<div class="tag-chip">${t}</div>`).join('');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${acc.phone}</td>
+                <td>${acc.username || 'N/A'}</td>
+                <td><div class="tag-chip-container">${tagsHtml}</div></td>
+                <td>
+                    <md-text-button onclick='showAccountSettingsPage(${JSON.stringify(acc).replace(/"/g, "&quot;")})'>Settings</md-text-button>
+                    <md-text-button onclick="deleteAccount('${acc.phone}')">Delete</md-text-button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    });
+}
+
+function addAccount() {
+    const phone = prompt('Enter phone number (e.g., +1234567890):');
+    if (!phone) return;
+
+    apiPost('/api/accounts/add', { phone }, data => {
+        if (data.message.includes('code sent')) {
+            const code = prompt('Enter verification code:');
+            if (code) {
+                apiPost('/api/accounts/finalize', { phone, code }, finalizeData => {
+                     if (finalizeData.message.includes('password required')) {
+                        const password = prompt('Enter 2FA password:');
+                        if(password) apiPost('/api/accounts/finalize', { phone, password }, () => loadAccounts());
+                    } else {
+                        loadAccounts();
+                    }
+                });
+            }
+        } else if (data.message.includes('password required')) {
+             const password = prompt('Enter 2FA password:');
+             if(password) apiPost('/api/accounts/finalize', { phone, password }, () => loadAccounts());
+        } else {
+             loadAccounts();
+        }
+    });
+}
+
+function deleteAccount(phone) {
+    if (confirm(`Delete account ${phone}? This also deletes the session file.`)) {
+        apiPost('/api/accounts/delete', { phone }, () => loadAccounts());
+    }
+}
+
+// --- Account Settings ---
+
+function handleAvatarUpload() {
+    const input = document.getElementById('avatar-upload-input');
+    const file = input.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    fetch('/api/accounts/upload_avatar', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            document.getElementById('account-avatar-path').value = data.path;
+            const avatarPreview = document.getElementById('avatar-preview');
+            avatarPreview.src = URL.createObjectURL(file);
+            avatarPreview.style.display = 'block';
+            alert('Avatar uploaded. Save settings to confirm.');
+        } else {
+            alert(`Upload failed: ${data.message}`);
+        }
+    });
+}
+
+function generateUserAgent() {
+    const os = document.getElementById('ua-os').value;
+    const chromeVersion = document.getElementById('ua-chrome-version').value;
+    document.getElementById('account-user-agent-input').value = 
+        `Mozilla/5.0 (${os}; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`;
+}
+
+async function saveAccountSettings() {
+    if (!currentAccount) return alert('No account selected.');
+
+    const phone = currentAccount.phone;
+    const proxySelect = document.getElementById('account-proxy-select');
+    const selectedProxyId = proxySelect.value;
+    
+    const proxiesResponse = await fetch('/api/proxies');
+    const proxies = await proxiesResponse.json();
+    const selectedProxy = proxies.find(p => p.id === selectedProxyId) || null;
+
+    const settings = {
+        ...currentAccount.settings,
+        profile: {
+            first_name: document.getElementById('account-first-name').value,
+            last_name: document.getElementById('account-last-name').value,
+            bio: document.getElementById('account-bio').value,
+            avatar_path: document.getElementById('account-avatar-path').value,
+        },
+        user_agent: document.getElementById('account-user-agent-input').value,
+        proxy: selectedProxy,
+    };
+
+    apiPost('/api/accounts/settings', { phone, settings }, (data) => {
+        if (data.status === 'ok') {
+            currentAccount.settings = settings;
+        }
+    });
+}
+
+function applyProfileChanges() {
+     if (!currentAccount) return alert('No account selected.');
+     apiPost('/api/accounts/profile', {
+         phone: currentAccount.phone,
+         profile: {
+            first_name: document.getElementById('account-first-name').value,
+            last_name: document.getElementById('account-last-name').value,
+            bio: document.getElementById('account-bio').value,
+            avatar_path: document.getElementById('account-avatar-path').value,
+        }
+    });
+}
+
+async function populateProxyDropdown(selectedProxyId) {
+    const select = document.getElementById('account-proxy-select');
+    select.innerHTML = '<md-select-option value=""></md-select-option>'; 
+    try {
+        const response = await fetch('/api/proxies');
+        const proxies = await response.json();
+        proxies.forEach(p => {
+            const option = document.createElement('md-select-option');
+            option.value = p.id;
+            option.innerText = `${p.host}:${p.port}`;
+            if (p.id === selectedProxyId) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    } catch (error) { console.error("Couldn't load proxies for dropdown:", error); }
+}
+
+// --- Audience CRM ---
+function loadAccountsForScraper() {
+    const select = document.getElementById('scraper-account-select');
+    select.innerHTML = '<md-select-option></md-select-option>';
+    fetch('/api/accounts').then(r => r.json()).then(accounts => {
+        accounts.forEach(acc => {
+            const option = document.createElement('md-select-option');
+            option.value = acc.phone;
+            option.innerText = acc.phone + (acc.username ? ` (${acc.username})` : '');
+            select.appendChild(option);
+        });
+    });
+}
+
+function scrapeAudience() {
+    const phone = document.getElementById('scraper-account-select').value;
+    const chatLink = document.getElementById('scraper-chat-link').value;
+    const statusEl = document.getElementById('scraper-status');
+
+    if (!phone || !chatLink) {
+        return alert('Please select an account and provide a chat link.');
+    }
+
+    statusEl.textContent = 'Scraping in progress... This may take a while.';
+    document.getElementById('audience-results-container').style.display = 'none';
+    scrapedAudience = [];
+
+    apiPost('/api/audiences/scrape', { phone, chat_link: chatLink }, (data) => {
+        if (data.status === 'ok') {
+            statusEl.textContent = `Scraping complete. Found ${data.users.length} users.`;
+            scrapedAudience = data.users;
+            displayAudienceResults(data.users);
+        } else {
+             // The generic apiPost handler will show the error alert
+            statusEl.textContent = 'An error occurred during scraping.';
+        }
+    });
+}
+
+function displayAudienceResults(users) {
+    const tableBody = document.getElementById('audience-table-body');
+    tableBody.innerHTML = '';
+    users.forEach(user => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${user.id}</td>
+            <td>${user.username || 'N/A'}</td>
+            <td>${[user.first_name, user.last_name].filter(Boolean).join(' ') || 'N/A'}</td>
+            <td>${user.phone || 'N/A'}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+    document.getElementById('audience-results-container').style.display = 'block';
+}
+
+function saveAudience() {
+    const name = document.getElementById('save-audience-name').value.trim();
+    if (!name) {
+        return alert('Please provide a name for the audience.');
+    }
+    if (scrapedAudience.length === 0) {
+        return alert('No audience data to save. Please scrape first.');
+    }
+
+    apiPost('/api/audiences/save', { name, users: scrapedAudience }, (data) => {
+        if (data.status === 'ok') {
+            document.getElementById('save-audience-name').value = '';
+            document.getElementById('audience-results-container').style.display = 'none';
+            scrapedAudience = [];
+            loadAndDisplayAudiences();
+        }
+    });
+}
+
+function loadAndDisplayAudiences() {
+    const listContainer = document.getElementById('saved-audiences-list');
+    listContainer.innerHTML = '';
+    fetch('/api/audiences').then(r => r.json()).then(files => {
+        if (files.length === 0) {
+            listContainer.innerHTML = '<p>No saved audiences yet.</p>';
+            return;
+        }
+        files.forEach(filename => {
+            const item = document.createElement('div');
+            item.className = 'list-item';
+            item.innerHTML = `
+                <span>${filename.replace('.json', '')}</span>
+                <div class="item-actions">
+                    <md-icon-button onclick="deleteAudience('${filename}')">
+                        <span class="material-symbols-outlined">delete</span>
+                    </md-icon-button>
+                </div>
+            `;
+            listContainer.appendChild(item);
+        });
+    });
+}
+
+function deleteAudience(filename) {
+    if (!confirm(`Are you sure you want to delete the audience "${filename.replace('.json', '')}"?`)) return;
+
+    apiPost('/api/audiences/delete', { filename }, (data) => {
+        if (data.status === 'ok') {
+            loadAndDisplayAudiences();
+        }
+    });
+}
+
+
+// --- Proxy Manager ---
+
+function loadProxies() {
+    fetch('/api/proxies').then(r => r.json()).then(proxies => {
+        const tableBody = document.getElementById('proxies-table-body');
+        tableBody.innerHTML = '';
+        if (!proxies) return;
+        proxies.forEach(p => {
+            const row = document.createElement('tr');
+            row.id = `proxy-${p.id}`;
+            row.innerHTML = `
+                <td>${p.host}</td>
+                <td>${p.port}</td>
+                <td>${p.user || 'N/A'}</td>
+                <td class="proxy-status">Not Checked</td>
+                <td>
+                    <md-text-button onclick="checkProxy('${p.id}')">Check</md-text-button>
+                    <md-text-button onclick="deleteProxy('${p.id}')">Delete</md-text-button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+    }).catch(e => console.error('Failed to load proxies:', e));
+}
+
+function addProxy() {
+    const proxyData = {
+        type: document.getElementById('proxy-add-type').value,
+        host: document.getElementById('proxy-add-host').value,
+        port: parseInt(document.getElementById('proxy-add-port').value, 10),
+        user: document.getElementById('proxy-add-user').value,
+        pass: document.getElementById('proxy-add-pass').value
+    };
+    if (!proxyData.host || !proxyData.port) return alert('Host and Port are required.');
+
+    apiPost('/api/proxies/add', proxyData, (data) => {
+        if (data.status === 'ok') {
+            loadProxies();
+            document.getElementById('proxy-add-host').value = '';
+            document.getElementById('proxy-add-port').value = '';
+            document.getElementById('proxy-add-user').value = '';
+            document.getElementById('proxy-add-pass').value = '';
+        }
+    });
+}
+
+function deleteProxy(proxyId) {
+    if (confirm('Are you sure you want to delete this proxy?')) {
+        apiPost('/api/proxies/delete', { id: proxyId }, (data) => {
+            if (data.status === 'ok') loadProxies();
+        });
+    }
+}
+
+async function checkProxy(proxyId) {
+    const statusCell = document.querySelector(`#proxy-${proxyId} .proxy-status`);
+    if (!statusCell) return;
+    statusCell.textContent = 'Checking...';
+    statusCell.className = 'proxy-status';
+
+    try {
+        const proxiesResponse = await fetch('/api/proxies');
+        const proxies = await proxiesResponse.json();
+        const proxyToCheck = proxies.find(p => p.id === proxyId);
+
+        if (!proxyToCheck) return statusCell.textContent = 'Error: Not Found';
+
+        apiPost('/api/proxies/check', proxyToCheck, (data) => {
+            statusCell.textContent = data.proxy_status || 'Error';
+            statusCell.classList.add(data.proxy_status === 'working' ? 'working' : 'not-working');
+        });
+    } catch (e) {
+        statusCell.textContent = 'Error';
+    }
+}
+
+// --- Tags Dialog ---
+const tagsDialog = document.getElementById('tags-dialog');
+
+function openTagsDialog() {
+    loadTags();
+    tagsDialog.show();
+}
+
+function loadTags() {
+    const container = document.getElementById('tags-list');
+    container.innerHTML = 'Loading...';
+    fetch('/api/tags').then(r => r.json()).then(tags => {
+        container.innerHTML = '';
+        if (!tags) return;
+        tags.forEach(tag => {
+            const tagEl = document.createElement('div');
+            tagEl.className = 'tag-item';
+            tagEl.innerHTML = `
+                <span>${tag}</span>
+                <md-icon-button onclick="deleteTag('${tag}')">
+                    <span class="material-symbols-outlined">delete</span>
+                </md-icon-button>
+            `;
+            container.appendChild(tagEl);
+        });
+    }).catch(e => {
+        container.innerHTML = 'Failed to load tags.';
+        console.error('Failed to load tags:', e);
+    });
+}
+
+function addTag() {
+    const nameInput = document.getElementById('tag-add-name');
+    const name = nameInput.value.trim();
+    if (!name) return;
+    apiPost('/api/tags/add', { name }, (data) => {
+        if (data.status === 'ok') {
+            loadTags();
+            nameInput.value = '';
+        }
+    });
+}
+
+function deleteTag(tagName) {
+    if (confirm(`Delete the tag "${tagName}"? This will remove it from all accounts.`)) {
+        apiPost('/api/tags/delete', { name: tagName }, (data) => {
+            if (data.status === 'ok') {
+                loadTags();
+                loadAccounts();
+            }
+        });
+    }
+}
