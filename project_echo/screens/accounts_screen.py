@@ -39,7 +39,6 @@ class DialogContent(MDBoxLayout):
 class AccountsPanel(MDBoxLayout):
     """A panel that displays a table of accounts and provides management options."""
     
-    # FIX: Data for the SpeedDial button
     speed_dial_data = {
         'cloud-upload-outline': 'Import from API',
         'pencil': 'Add manually',
@@ -69,7 +68,6 @@ class AccountsPanel(MDBoxLayout):
         )
         self.ids.table_container.add_widget(self.data_table)
 
-    # FIX: Callback for the SpeedDial button
     def speed_dial_callback(self, instance):
         """Handle actions from the speed dial buttons."""
         icon = instance.icon
@@ -79,35 +77,35 @@ class AccountsPanel(MDBoxLayout):
             print("Action: Show 'API Import' dialog (not implemented yet).")
 
     def show_add_account_dialog(self):
-        """Shows the 'Add Account' dialog."""
-        if not self.dialog:
-            self.dialog = MDDialog(
-                title="Add New Account",
-                type="custom",
-                content_cls=DialogContent(),
-                buttons=[
-                    MDFlatButton(
-                        text="CANCEL",
-                        on_release=self.close_dialog
-                    ),
-                    MDRaisedButton(
-                        text="ADD",
-                        on_release=self.add_account
-                    ),
-                ],
-            )
-        # Clear fields before opening
-        self.dialog.content_cls.ids.phone_field.text = ""
-        self.dialog.content_cls.ids.tags_field.text = ""
-        self.dialog.content_cls.ids.description_field.text = ""
+        """FIX: Creates and shows a new 'Add Account' dialog every time to prevent state issues."""
+        self.dialog = MDDialog(
+            title="Add New Account",
+            type="custom",
+            content_cls=DialogContent(),
+            buttons=[
+                MDFlatButton(
+                    text="CANCEL",
+                    on_release=self.close_dialog
+                ),
+                MDRaisedButton(
+                    text="ADD",
+                    on_release=self.add_account
+                ),
+            ],
+        )
         self.dialog.open()
 
     def close_dialog(self, *args):
-        """Closes the dialog."""
-        self.dialog.dismiss()
+        """Closes the currently active dialog."""
+        if self.dialog:
+            self.dialog.dismiss()
+            self.dialog = None
 
     def add_account(self, *args):
-        """Adds the new account data to the table."""
+        """Adds the new account data from the currently active dialog."""
+        if not self.dialog:
+            return
+
         content = self.dialog.content_cls
         phone = content.ids.phone_field.text
         tags = content.ids.tags_field.text
