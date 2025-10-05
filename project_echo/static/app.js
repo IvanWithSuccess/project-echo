@@ -1,28 +1,37 @@
 /**
- * Switches the visible content section based on the navigation item clicked.
- * @param {string} sectionId The ID of the section to show.
+ * Handles the tab switching event from the <md-tabs> component.
  */
-function switchSection(sectionId) {
-    // Hide all content sections
-    document.querySelectorAll('.content-section').forEach(section => {
-        section.style.display = 'none';
-    });
-
-    // Show the selected section
-    const activeSection = document.getElementById(sectionId);
-    if (activeSection) {
-        activeSection.style.display = 'block';
+function handleTabChange(event) {
+    // The detail object contains the index of the selected tab
+    const selectedIndex = event.detail.selectedTabIndex;
+    const tabs = document.querySelectorAll('md-primary-tab');
+    
+    if (tabs[selectedIndex]) {
+        // Get the ID of the panel this tab controls
+        const panelId = tabs[selectedIndex].getAttribute('aria-controls');
+        switchPanel(panelId);
     }
+}
 
-    // Update the active state in the navigation rail
-    // Note: The Material 3 components might handle this automatically based on 
-    // other interactions, but we'll be explicit for clarity.
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.active = (item.id === `nav-${sectionId}`);
+/**
+ * Switches the visible content panel.
+ * @param {string} panelId The ID of the panel to show.
+ */
+function switchPanel(panelId) {
+    // Hide all content panels
+    document.querySelectorAll('.content-panel').forEach(panel => {
+        panel.style.display = 'none';
     });
+
+    // Show the selected panel
+    const activePanel = document.getElementById(panelId);
+    if (activePanel) {
+        activePanel.style.display = 'block';
+    }
 }
 
 // Initialize the view on first load
 document.addEventListener('DOMContentLoaded', () => {
-    // No initial switch needed, handled by default HTML visibility
+    // We are setting the "Accounts" tab as active by default in the HTML
+    // so no initial switch is needed here.
 });

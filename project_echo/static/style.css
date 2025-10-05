@@ -2,39 +2,73 @@
 body {
     margin: 0;
     font-family: 'Roboto', sans-serif;
-    background-color: #fcfcff; /* Material 3 background color */
-    color: #1a1c1e;
+    background-color: #f8f9fa; /* A light grey background */
+    color: #212529;
 }
 
-/* CORRECTED: Main Layout using Flexbox */
-.main-layout {
+.app-layout {
     display: flex;
+    flex-direction: column;
     height: 100vh;
-    width: 100vw;
 }
 
+/* Top Bar & Navigation */
+.top-bar {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #dee2e6;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.logo {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-right: 32px;
+}
+
+md-tabs {
+    flex-grow: 1;
+    --md-primary-tab-container-color: transparent;
+    --md-primary-tab-label-text-color: #495057;
+    --md-primary-tab-active-indicator-color: #0d6efd;
+    --md-primary-tab-active-label-text-color: #0d6efd;
+}
+
+/* Main Content Area */
 .content {
     flex-grow: 1;
     padding: 24px;
     overflow-y: auto;
 }
 
-/* Navigation Rail Customization */
-md-navigation-rail {
-    --md-navigation-rail-container-color: #f0f4fa; /* A slightly off-white for the rail */
-    padding-top: 24px;
-}
-
-.nav-item[active] {
-    /* Material components handle their own active state colors based on the theme */
-}
-
-/* Content Sections */
-.content-section {
+.content-panel {
     display: none; /* Hidden by default */
 }
 
-h1 {
+/* Toolbar within a panel */
+.toolbar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.spacer {
+    flex-grow: 1;
+}
+
+/* Placeholder for data tables */
+.table-placeholder {
+    border: 1px dashed #ced4da;
+    padding: 48px;
+    text-align: center;
+    background-color: #ffffff;
+    border-radius: 8px;
+    color: #6c757d;
+}
+
+h2 {
     font-weight: 500;
-    color: #1d1b20;
+    margin-bottom: 16px;
 }
