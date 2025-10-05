@@ -22,42 +22,42 @@
 
 </head>
 <body>
-    <div class="app-layout">
+    <!-- CORRECTED: Class name now matches style.css -->
+    <div class="main-layout">
         <!-- Side Navigation Rail -->
         <md-navigation-rail id="nav-rail">
             <md-navigation-rail-item id="nav-dashboard" class="nav-item" active onclick="switchSection('dashboard')">
                 <md-icon slot="active-icon">dashboard</md-icon>
                 <md-icon slot="inactive-icon">dashboard_outlined</md-icon>
-                Dashboard
+                <!-- CORRECTED: Label is now in a slotted div -->
+                <div slot="label">Dashboard</div>
             </md-navigation-rail-item>
             <md-navigation-rail-item id="nav-accounts" class="nav-item" onclick="switchSection('accounts')">
                 <md-icon slot="active-icon">group</md-icon>
                 <md-icon slot="inactive-icon">group_outlined</md-icon>
-                Accounts
+                <!-- CORRECTED: Label is now in a slotted div -->
+                <div slot="label">Accounts</div>
             </md-navigation-rail-item>
         </md-navigation-rail>
 
-        <!-- Main Content Area with Top App Bar -->
-        <div class="main-content-area">
-            <header class="top-app-bar">
-                 <h1 class="top-app-bar-title">Dashboard</h1>
-            </header>
+        <!-- Main Content Area -->
+        <main class="content">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="content-section" style="display: block;">
+                <h1>Dashboard</h1>
+                <p>Welcome to Project Echo.</p>
+            </section>
 
-            <main class="content">
-                <!-- Dashboard Section -->
-                <section id="dashboard" class="content-section">
-                    <p>Welcome to Project Echo.</p>
-                </section>
-
-                <!-- Accounts Section -->
-                <section id="accounts" class="content-section">
-                    <!-- Account content will go here -->
-                </section>
-            </main>
-        </div>
+            <!-- Accounts Section -->
+            <section id="accounts" class="content-section" style="display: none;">
+                <h1>Accounts Center</h1>
+                <!-- Account content will go here -->
+            </section>
+        </main>
     </div>
 
     <!-- Custom App Logic -->
     <script src="/static/app.js"></script>
+
 </body>
 </html>

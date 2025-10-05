@@ -2,14 +2,15 @@
 body {
     margin: 0;
     font-family: 'Roboto', sans-serif;
-    background-color: #fcfcff;
+    background-color: #fcfcff; /* Material 3 background color */
     color: #1a1c1e;
 }
 
-/* Main Layout */
+/* CORRECTED: Main Layout using Flexbox */
 .main-layout {
     display: flex;
     height: 100vh;
+    width: 100vw;
 }
 
 .content {
@@ -20,15 +21,20 @@ body {
 
 /* Navigation Rail Customization */
 md-navigation-rail {
-    --md-navigation-rail-container-color: #f0f4fa;
-    padding-top: 24px; /* Add some space at the top */
+    --md-navigation-rail-container-color: #f0f4fa; /* A slightly off-white for the rail */
+    padding-top: 24px;
 }
 
 .nav-item[active] {
-    /* Material components handle their own active state colors */
+    /* Material components handle their own active state colors based on the theme */
 }
 
 /* Content Sections */
 .content-section {
     display: none; /* Hidden by default */
+}
+
+h1 {
+    font-weight: 500;
+    color: #1d1b20;
 }
