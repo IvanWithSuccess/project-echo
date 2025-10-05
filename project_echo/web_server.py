@@ -24,6 +24,9 @@ API_ID = 26947469
 API_HASH = "731a222f9dd8b290db925a6a382159dd"
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
+# --- THE CRITICAL FIX: Disable all caching ---
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- App State ---
