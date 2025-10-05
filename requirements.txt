@@ -1,0 +1,16 @@
+# Kivy Framework
+Kivy==2.3.1
+
+# KivyMD UI Library (Development Version)
+kivymd==2.0.1.dev0
+materialyoucolor==2.0.10
+asynckivy==0.6.4
+asyncgui==0.6.3
+
+# Standard Kivy Dependencies
+Pillow
+Kivy-Garden
+docutils
+pygments
+requests
+filetype

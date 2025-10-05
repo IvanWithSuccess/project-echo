@@ -1,0 +1,31 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+develop-eggs/
+.eggs/
+*.egg-info/
+*.egg
+
+# Kivy logs
+.kivy/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Log files
+logs/
+*.log
+
+# Environment variables
+.env

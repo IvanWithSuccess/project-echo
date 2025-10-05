@@ -1,24 +1,14 @@
 
 from kivy.lang import Builder
 from kivymd.app import MDApp
-from kivymd.uix.tab import MDTabsBase
-from kivymd.uix.floatlayout import MDFloatLayout
 
-# --- Import the custom screen ---
+# --- Import the custom screen and new Tab components ---
 from project_echo.screens.accounts_screen import AccountsPanel
+from kivymd.uix.tabs import MDTabs, MDTabsItem, MDTabsItemIcon, MDTabsItemText
+from kivymd.uix.label import MDLabel
 
 # --- Load the KV file for the Accounts screen ---
-# This will be automatically associated with the AccountsPanel class by Kivy
 Builder.load_file("project_echo/screens/accounts_screen.kv")
-
-
-# =========================================================================
-# >> WIDGETS AND LAYOUTS
-# =========================================================================
-
-class Tab(MDFloatLayout, MDTabsBase):
-    """Base class for a tab in the MDTabs widget."""
-    pass
 
 # =========================================================================
 # >> MAIN APP CLASS
@@ -37,7 +27,6 @@ MDBoxLayout:
 
     MDTabs:
         id: tabs
-        on_tab_switch: app.on_tab_switch(*args)
 """
 
     def build(self):
@@ -54,20 +43,19 @@ MDBoxLayout:
             "Campaigns": "bullhorn",
         }
         for tab_name, icon_name in tabs_data.items():
-            tab = Tab(title=tab_name, icon=icon_name)
-            if tab_name == "Accounts":
-                # Create an instance of the AccountsPanel from the separate file
-                tab.add_widget(AccountsPanel())
-            else:
-                # Add a placeholder for other tabs
-                tab.add_widget(Builder.load_string(f'''MDLabel:
-    text: "{tab_name} content will be here"
-    halign: "center"'''))
-            self.root.ids.tabs.add_widget(tab)
+            # FIX: Switched to the new KivyMD 2.0 tab creation API
+            item = MDTabsItem()
+            item.add_widget(MDTabsItemIcon(icon=icon_name))
+            item.add_widget(MDTabsItemText(text=tab_name))
 
-    def on_tab_switch(self, *args):
-        """Called when a tab is switched. Can be used to load data."""
-        pass
+            if tab_name == "Accounts":
+                item.add_widget(AccountsPanel())
+            else:
+                item.add_widget(MDLabel(
+                    text=f"{tab_name} content will be here",
+                    halign="center"
+                ))
+            self.root.ids.tabs.add_widget(item)
 
 # ==========================================================================
 # >> MAIN EXECUTION

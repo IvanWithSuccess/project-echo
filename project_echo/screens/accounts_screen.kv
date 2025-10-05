@@ -11,7 +11,9 @@
         height: 48
         spacing: 10
 
-        MDFillRoundFlatButton:
+        # FIX: Replaced deprecated MDFillRoundFlatButton with MDButton
+        MDButton:
+            style: "filled"
             text: "CREATE ACCOUNT"
             icon: "plus"
             pos_hint: {"center_y": 0.5}
@@ -19,9 +21,10 @@
         # Spacer
         BoxLayout:
 
-        # Status Filter Dropdown Button
-        MDFlatButton:
-            id: status_button  # This ID is now correctly scoped and accessible
+        # FIX: Replaced deprecated MDFlatButton with MDButton
+        MDButton:
+            id: status_button
+            style: "text"
             text: "ANY STATUS"
             pos_hint: {"center_y": 0.5}
             on_release: root.open_status_menu()
@@ -30,4 +33,3 @@
     MDLabel:
         text: "Accounts data table will be here"
         halign: "center"
-

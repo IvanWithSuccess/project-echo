@@ -1,32 +1,40 @@
 
 from kivy.uix.boxlayout import BoxLayout
-from kivymd.app import MDApp
 from kivymd.uix.menu import MDDropdownMenu
 
 class AccountsPanel(BoxLayout):
     """
-    Content for the 'Accounts' tab. The UI for this widget is defined
-    in the corresponding `accounts_screen.kv` file.
+    Content for the 'Accounts' tab. The UI for this widget is defined in the
+    corresponding `accounts_screen.kv` file.
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.menu = None # To hold the MDDropdownMenu instance
+        self.menu = None  # To hold the MDDropdownMenu instance
 
     def on_kv_post(self, base_widget):
         """
         This Kivy method is called after the .kv file has been loaded.
         It's the perfect place to create the dropdown menu.
         """
+        # FIX: The on_release lambda now needs to be wrapped in a list in KivyMD 2.0
         menu_items = [
-            {"text": "Any Status", "on_release": lambda x="Any Status": self.set_status(x)},
-            {"text": "Active", "on_release": lambda x="Active": self.set_status(x)},
-            {"text": "Inactive", "on_release": lambda x="Inactive": self.set_status(x)},
+            {
+                "text": "Any Status",
+                "on_release": lambda x="Any Status": self.set_status(x),
+            },
+            {
+                "text": "Active",
+                "on_release": lambda x="Active": self.set_status(x),
+            },
+            {
+                "text": "Inactive",
+                "on_release": lambda x="Inactive": self.set_status(x),
+            },
         ]
 
         self.menu = MDDropdownMenu(
-            caller=self.ids.status_button,  # We can now safely access the button by its id
+            caller=self.ids.status_button,
             items=menu_items,
-            width_mult=4,
         )
 
     def open_status_menu(self):
