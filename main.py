@@ -1,13 +1,13 @@
 
 from kivy.lang import Builder
 from kivy.core.window import Window
-# --- FIX: Removed unused get_color_from_hex import ---
-# from kivy.utils import get_color_from_hex
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.button import MDTextButton
 from kivymd.uix.label import MDLabel
 from functools import partial
+# --- FIX: Import NoTransition to disable screen switching animation ---
+from kivy.uix.screenmanager import NoTransition
 
 # Import our custom screen content
 from project_echo.screens.accounts_screen import AccountsPanel
@@ -27,15 +27,17 @@ class ProjectEchoApp(MDApp):
 
     def build(self):
         """Initializes the application and returns the root widget."""
-        # --- FIX: Use a standard color palette compatible with KivyMD 1.2.0 ---
-        self.theme_cls.theme_style = "Dark"  # As requested: black/dark background
-        self.theme_cls.primary_palette = "Gray" # As requested: gray accents
+        self.theme_cls.theme_style = "Dark"
+        self.theme_cls.primary_palette = "Gray"
 
         Window.maximize()
         return Builder.load_file('main.kv')
 
     def on_start(self):
         """Create and populate screens and navigation buttons."""
+        # --- FIX: Apply NoTransition to the screen manager ---
+        self.root.ids.screen_manager.transition = NoTransition()
+
         screens_data = {
             "dashboard": {"icon": "view-dashboard", "title": "Dashboard"},
             "accounts": {"icon": "account-group", "title": "Accounts"},

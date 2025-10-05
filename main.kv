@@ -4,8 +4,6 @@
 # =========================================================================
 
 <NavButton>:
-    # FIX: Removed base class (@MDButton) as it's now handled in Python.
-    # The class now inherits styling from MDTextButton via the Python code.
     theme_width: "Custom"
     height: dp(72)
     width: dp(80)
@@ -61,4 +59,5 @@ MDBoxLayout:
 
     MDScreenManager:
         id: screen_manager
-        transition: "none"
+        # FIX: Removed invalid 'transition: "none"' property.
+        # This will be set in the main.py file correctly.
