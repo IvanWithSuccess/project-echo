@@ -18,9 +18,8 @@ logging.basicConfig(level=logging.INFO,
 @app.route('/')
 def index():
     """Serves the main single-page application with a cache-busting query string."""
+    # DEFINITIVE FIX: This log message MUST appear in your console.
     logging.info("Serving index.html with cache buster.")
-    # DEFINITIVE FIX: Generate a version based on the current time.
-    # This is passed to the template to append to static file URLs.
     cache_buster = str(time.time())
     return render_template('index.html', cache_buster=cache_buster)
 

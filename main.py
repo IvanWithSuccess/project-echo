@@ -17,9 +17,9 @@ if __name__ == '__main__':
     # Ensure necessary directories exist before starting
     setup_directories()
 
-    # Open the web browser automatically after a short delay
-    # This gives the server a moment to start up
-    threading.Timer(1, lambda: webbrowser.open_new(URL)).start()
+    # DEFINITIVE FIX: Use open_new_tab() to explicitly open a new tab.
+    threading.Timer(1, lambda: webbrowser.open_new_tab(URL)).start()
 
     # Run the Flask web server
+    # use_reloader=False is important to prevent the script from running twice
     app.run(host=HOST, port=PORT, debug=True, use_reloader=False)
