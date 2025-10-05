@@ -7,18 +7,20 @@
 
             MDLabel:
                 text: "Accounts Management"
-                font_style: "H4"
+                font_style: "H5"  # FIX: Reduced font size for a cleaner look
                 adaptive_height: True
                 padding: [0, dp(12)]
 
-            # Container for the data table
+            # FIX: Added size_hint_y to ensure the container is visible
             MDBoxLayout:
                 id: table_container
+                size_hint_y: 1
 
         MDFloatingActionButton:
             icon: "plus"
-            pos_hint: {"right": 1, "bottom": 1}
-            x: -dp(16)
-            y: dp(16)
+            # FIX: Changed positioning to use padding-like values for consistent spacing
+            pos_hint: {}
+            x: root.width - self.width - dp(24)
+            y: dp(24)
             md_bg_color: app.theme_cls.primary_color
             on_release: root.show_add_account_dialog()
