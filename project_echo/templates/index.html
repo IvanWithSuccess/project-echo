@@ -11,10 +11,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
-    <!-- CORRECT: Material 3 Styles (latest stable) -->
+    <!-- Material 3 Styles -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@material/web@1.4.1/dist/material.css">
 
-    <!-- CORRECT: Material 3 Web Components (latest stable) -->
+    <!-- Material 3 Web Components -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/@material/web@1.4.1/all.js?render"></script>
 
     <!-- Custom Styles -->
@@ -22,44 +22,42 @@
 
 </head>
 <body>
-
-    <div class="main-layout">
+    <div class="app-layout">
         <!-- Side Navigation Rail -->
         <md-navigation-rail id="nav-rail">
             <md-navigation-rail-item id="nav-dashboard" class="nav-item" active onclick="switchSection('dashboard')">
                 <md-icon slot="active-icon">dashboard</md-icon>
                 <md-icon slot="inactive-icon">dashboard_outlined</md-icon>
-                <div slot="label">Dashboard</div>
+                Dashboard
             </md-navigation-rail-item>
             <md-navigation-rail-item id="nav-accounts" class="nav-item" onclick="switchSection('accounts')">
                 <md-icon slot="active-icon">group</md-icon>
                 <md-icon slot="inactive-icon">group_outlined</md-icon>
-                <div slot="label">Accounts</div>
+                Accounts
             </md-navigation-rail-item>
-            <!-- Add other nav items here -->
         </md-navigation-rail>
 
-        <!-- Main Content Area -->
-        <main class="content">
-            <!-- Dashboard Section -->
-            <section id="dashboard" class="content-section" style="display: block;">
-                <h1>Dashboard</h1>
-                <p>Welcome to Project Echo.</p>
-            </section>
+        <!-- Main Content Area with Top App Bar -->
+        <div class="main-content-area">
+            <header class="top-app-bar">
+                 <h1 class="top-app-bar-title">Dashboard</h1>
+            </header>
 
-            <!-- Accounts Section -->
-            <section id="accounts" class="content-section" style="display: none;">
-                <h1>Accounts Center</h1>
-                <!-- Account content will go here -->
-            </section>
+            <main class="content">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="content-section">
+                    <p>Welcome to Project Echo.</p>
+                </section>
 
-            <!-- Other sections will be added here -->
-
-        </main>
+                <!-- Accounts Section -->
+                <section id="accounts" class="content-section">
+                    <!-- Account content will go here -->
+                </section>
+            </main>
+        </div>
     </div>
 
     <!-- Custom App Logic -->
     <script src="/static/app.js"></script>
-
 </body>
 </html>
