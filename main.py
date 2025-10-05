@@ -6,12 +6,11 @@ from kivymd.uix.tab import MDTabsBase
 from kivymd.uix.floatlayout import MDFloatLayout
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.icon_definitions import md_icons
+from kivy.clock import Clock
 
 # =========================================================================
-# >> KIVY LANG DEFINITION FOR TABS
+# >> KIVY LANG DEFINITION
 # =========================================================================
-# Using Builder is a Kivy best practice for defining UI structure.
-# FIX: Removed the invalid '<Tab>:' rule which caused the ParserException.
 KV = """
 MDBoxLayout:
     orientation: "vertical"
@@ -33,20 +32,15 @@ class Tab(MDFloatLayout, MDTabsBase):
     pass
 
 class AccountsPanel(BoxLayout):
-    """
-    Content for the 'Accounts' tab, now built with KivyMD components.
-    This will be dynamically added to the 'Accounts' Tab.
-    """
+    """Content for the 'Accounts' tab, built with KivyMD components."""
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.padding = [20, 20, 20, 20]
         self.spacing = 20
 
-        # --- Toolbar ---
         toolbar = BoxLayout(size_hint_y=None, height=48, spacing=10)
 
-        # 'Create Account' Button with Icon
         create_button = Builder.load_string("""
 MDFillRoundFlatButton:
     text: "CREATE ACCOUNT"
@@ -55,12 +49,11 @@ MDFillRoundFlatButton:
 """)
         toolbar.add_widget(create_button)
 
-        # Spacer
         toolbar.add_widget(BoxLayout())
 
-        # Status Filter Dropdown
         self.menu_button = Builder.load_string("""
 MDFlatButton:
+    id: status_button
     text: "ANY STATUS"
     pos_hint: {"center_y": 0.5}
     on_release: app.open_status_menu(self)
@@ -68,7 +61,6 @@ MDFlatButton:
         toolbar.add_widget(self.menu_button)
         self.add_widget(toolbar)
 
-        # --- Data Table Placeholder ---
         table_placeholder = Builder.load_string("""
 MDLabel:
     text: "Accounts data table will be here"
@@ -76,25 +68,21 @@ MDLabel:
 """)
         self.add_widget(table_placeholder)
 
-
 # =========================================================================
 # >> MAIN APP CLASS
 # =========================================================================
 
 class ProjectEchoApp(MDApp):
     def build(self):
-        # Set the theme and style for the app
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
-        # Load the UI structure from the KV string
         return Builder.load_string(KV)
 
     def on_start(self):
         """
-        Called after the build() method, this is where we will
-        populate the tabs and create the status filter menu.
+        Populate the tabs and schedule the menu creation for the next frame
+        to avoid race conditions with widget creation.
         """
-        # --- Create Tabs ---
         tabs_data = {
             "Accounts": "account-group",
             "Dashboard": "view-dashboard",
@@ -103,50 +91,51 @@ class ProjectEchoApp(MDApp):
         for tab_name, icon_name in tabs_data.items():
             tab = Tab(title=tab_name, icon=icon_name)
             if tab_name == "Accounts":
-                # Add the specific layout for the Accounts tab
                 tab.add_widget(AccountsPanel())
             else:
-                tab.add_widget(Builder.load_string(f"""
-MDLabel:
+                tab.add_widget(Builder.load_string(f'''MDLabel:
     text: "{tab_name} content will be here"
-    halign: "center"
-"""))
+    halign: "center"'''))
             self.root.ids.tabs.add_widget(tab)
         
-        # --- Create Status Filter Menu ---
+        Clock.schedule_once(self.create_status_menu)
+
+    def create_status_menu(self, *args):
+        """
+        Creates the dropdown menu for the status filter.
+        This is called after the main UI is built to ensure widgets are available.
+        """
         menu_items = [
             {"text": "Any Status", "on_release": lambda x="Any Status": self.set_status(x)},
             {"text": "Active", "on_release": lambda x="Active": self.set_status(x)},
             {"text": "Inactive", "on_release": lambda x="Inactive": self.set_status(x)},
         ]
-        # We need to find the button to anchor the menu. This is a bit brittle and could be improved.
-        # It assumes the Accounts tab is the first one added.
-        accounts_tab_content = self.root.ids.tabs.get_tab_list()[0].children[0]
-        status_button = accounts_tab_content.children[1].children[0]
+        
+        # Find the button to anchor the menu. This is now safe to call.
+        accounts_tab_content = self.root.ids.tabs.get_tab_list()[0].parent.parent.children[0]
+        status_button = accounts_tab_content.ids.status_button
 
         self.status_menu = MDDropdownMenu(
-            caller=status_button, 
+            caller=status_button,
             items=menu_items,
             width_mult=4,
         )
 
-    def on_tab_switch(self, instance_tabs, instance_tab, instance_tab_label, tab_text):
+    def on_tab_switch(self, *args):
         """Called when a tab is switched."""
-        # This is where we can load data for the specific tab
         pass
 
     def open_status_menu(self, button):
         """Opens the status filter dropdown menu."""
-        # The caller needs to be updated each time, in case the window is resized
-        self.status_menu.caller = button
-        self.status_menu.open()
+        if hasattr(self, 'status_menu'):
+            self.status_menu.caller = button
+            self.status_menu.open()
 
     def set_status(self, text_item):
         """Sets the text of the status button and closes the menu."""
-        button = self.status_menu.caller
-        button.text = text_item
-        self.status_menu.dismiss()
-
+        if hasattr(self, 'status_menu'):
+            self.status_menu.caller.text = text_item
+            self.status_menu.dismiss()
 
 # ==========================================================================
 # >> MAIN EXECUTION
