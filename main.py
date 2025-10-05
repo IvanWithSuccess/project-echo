@@ -4,7 +4,8 @@ from kivy.core.window import Window
 from kivy.utils import get_color_from_hex
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
-from kivymd.uix.button import MDButton
+# --- FIX: Import the correct button class for KivyMD 1.2.0 ---
+from kivymd.uix.button import MDTextButton
 from kivymd.uix.label import MDLabel
 from functools import partial
 
@@ -14,8 +15,8 @@ from project_echo.screens.accounts_screen import AccountsPanel
 # Load KV files
 Builder.load_file("project_echo/screens/accounts_screen.kv")
 
-# Define our custom button class directly in Python, linking it to the KV rule
-class NavButton(MDButton):
+# --- FIX: Inherit from MDTextButton instead of the non-existent MDButton ---
+class NavButton(MDTextButton):
     pass
 
 # =========================================================================
@@ -27,10 +28,8 @@ class ProjectEchoApp(MDApp):
 
     def build(self):
         """Initializes the application and returns the root widget."""
-        # --- Point 6: Set color scheme to Dark with a custom accent color ---
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Custom"
-        # Define the custom color "Mocha Mousse"
         self.theme_cls.primary_hue = "500"
         self.theme_cls.colors["Custom"] = {
             "500": get_color_from_hex("#a58d78"),
@@ -48,7 +47,6 @@ class ProjectEchoApp(MDApp):
         }
 
         for screen_name, screen_info in screens_data.items():
-            # --- 1. Create the screen ---
             screen = MDScreen(name=screen_name)
             if screen_name == "accounts":
                 screen.add_widget(AccountsPanel())
@@ -59,7 +57,6 @@ class ProjectEchoApp(MDApp):
                 ))
             self.root.ids.screen_manager.add_widget(screen)
 
-            # --- 2. Create the custom navigation button ---
             nav_button = NavButton(
                 text=screen_info['title'],
                 icon=screen_info['icon'],
@@ -67,7 +64,6 @@ class ProjectEchoApp(MDApp):
             )
             self.root.ids.nav_list.add_widget(nav_button)
 
-        # Start on the dashboard screen
         self.root.ids.screen_manager.current = 'dashboard'
 
     def switch_screen(self, screen_name, *args):

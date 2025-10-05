@@ -3,72 +3,62 @@
 # >> CUSTOM WIDGET DEFINITIONS
 # =========================================================================
 
-<NavButton@MDButton>:
-    # This is our new custom navigation button. It's based on MDButton,
-    # making the whole area clickable (solves point 4).
-    style: "text"
+<NavButton>:
+    # FIX: Removed base class (@MDButton) as it's now handled in Python.
+    # The class now inherits styling from MDTextButton via the Python code.
     theme_width: "Custom"
     height: dp(72)
     width: dp(80)
-    # This holds the icon and text vertically
     MDBoxLayout:
         orientation: 'vertical'
         adaptive_size: True
         pos_hint: {'center_x': 0.5, 'center_y': 0.5}
         spacing: dp(4)
-        # The icon for the button
         MDIcon:
             id: icon
             icon: root.icon
             halign: 'center'
             valign: 'middle'
             font_size: dp(24)
-        # The text label below the icon
         MDLabel:
             text: root.text
             halign: 'center'
-            font_style: "Caption" # Smaller text as requested (solves point 2)
+            font_style: "Caption"
             adaptive_height: True
 
 # =========================================================================
 # >> MAIN LAYOUT KV
-# =========================================================================
+# ==========================================================================
 
 MDBoxLayout:
     orientation: 'horizontal'
 
-    # --- 1. NARROW NAVIGATION PANEL (Left Side) ---
     MDBoxLayout:
         orientation: 'vertical'
         size_hint_x: None
-        width: dp(80) # Narrow panel as requested (solves point 1)
+        width: dp(80)
         md_bg_color: self.theme_cls.bg_light
         padding: [dp(4), dp(16), dp(4), 0]
         spacing: dp(16)
 
-        # Smaller title at the top
         MDLabel:
-            text: "Echo" # Shortened and smaller title
+            text: "Echo"
             font_style: "H6"
             halign: "center"
             adaptive_height: True
 
-        # Container for navigation buttons, aligned to top
         MDBoxLayout:
             id: nav_list
             orientation: 'vertical'
             adaptive_height: True
             spacing: dp(8)
 
-        # Spacer to push nav_list to the top (solves point 3)
         Widget:
             size_hint_y: 1
 
     MDSeparator:
         orientation: 'vertical'
 
-    # --- 2. CONTENT AREA (Right Side) ---
     MDScreenManager:
         id: screen_manager
-        # No transition animation as requested (solves point 5)
         transition: "none"
