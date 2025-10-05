@@ -1,16 +1,19 @@
+import os
+import logging
 from project_echo.web_server import app, setup_directories
 
 if __name__ == "__main__":
-    # This function ensures that all necessary folders like 'sessions', 'audiences', etc. exist.
+    # Set up necessary folders like 'sessions', 'uploads', etc.
     setup_directories()
 
-    # We removed the automatic browser opening because it can be unreliable.
-    # Instead, we print a clear message for you to open the browser manually.
-    print("\n--- Project Echo Server is Starting ---")
-    print("--- Open your browser and navigate to: http://127.0.0.1:5000 ---")
-    print("--- Press CTRL+C here to stop the server. ---\n")
+    # Get the host and port from environment variables or use defaults
+    host = os.environ.get("FLASK_RUN_HOST", "127.0.0.1")
+    port = int(os.environ.get("FLASK_RUN_PORT", 5000))
 
-    # Run the Flask web server.
-    # debug=True is CRITICAL for development as it disables caching.
-    # use_reloader=False is critical for the background campaign threads to work correctly.
-    app.run(host="127.0.0.1", port=5000, debug=True, use_reloader=False)
+    logging.info(f"Starting Project Echo server at http://{host}:{port}")
+    
+    # --- CRITICAL --- 
+    # debug=True automatically enables the reloader and disables caching.
+    # This is essential for development.
+    # use_reloader=False is set to prevent conflicts with background tasks if we add them later.
+    app.run(host=host, port=port, debug=True, use_reloader=False)
