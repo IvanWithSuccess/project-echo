@@ -4,204 +4,212 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Echo</title>
+
+    <!-- Material Symbols -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    
+    <!-- Material Web Components -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@material/web/all.js?render-blocking=true"></script>
+
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="sidebar">
-        <h2>Project Echo</h2>
-        <nav>
-            <ul>
-                <li id="nav-dashboard" class="active" onclick="switchSection('dashboard')">Dashboard</li>
-                <li id="nav-accounts" onclick="switchSection('accounts')">Accounts Center</li>
-                <li id="nav-audiences" onclick="switchSection('audiences')">Audience CRM</li>
-                <li id="nav-campaigns" onclick="switchSection('campaigns')">Ad Cabinet</li>
-                <li id="nav-resources" onclick="switchSection('resources')">Resources</li>
-                <li id="nav-tasks" onclick="switchSection('tasks')">Task Center</li>
-                <li id="nav-settings" onclick="switchSection('settings')">Settings</li>
-            </ul>
-        </nav>
-    </div>
-
-    <div class="main-content">
-        <!-- Dashboard Section -->
-        <div id="dashboard" class="content-section active">
-            <h1>Dashboard</h1>
-            <p>Welcome to Project Echo. Here you'll find a summary of your activities.</p>
+    <div class="app-layout">
+        <div class="sidebar">
+            <h2 class="app-title">Project Echo</h2>
+            <nav>
+                <div class="nav-item" id="nav-dashboard" onclick="switchSection('dashboard')">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    Dashboard
+                </div>
+                <div class="nav-item" id="nav-accounts" onclick="switchSection('accounts')">
+                    <span class="material-symbols-outlined">group</span>
+                    Accounts Center
+                </div>
+                <div class="nav-item" id="nav-audiences" onclick="switchSection('audiences')">
+                    <span class="material-symbols-outlined">folder_shared</span>
+                    Audience CRM
+                </div>
+                <div class="nav-item" id="nav-campaigns" onclick="switchSection('campaigns')">
+                    <span class="material-symbols-outlined">campaign</span>
+                    Ad Cabinet
+                </div>
+                <div class="nav-item" id="nav-proxies" onclick="switchSection('proxies')">
+                    <span class="material-symbols-outlined">lan</span>
+                    Proxies
+                </div>
+                <div class="nav-item" id="nav-tasks" onclick="switchSection('tasks')">
+                    <span class="material-symbols-outlined">pending_actions</span>
+                     Task Center
+                </div>
+                <div class="nav-item" id="nav-settings" onclick="switchSection('settings')">
+                    <span class="material-symbols-outlined">settings</span>
+                    Settings
+                </div>
+            </nav>
         </div>
 
-        <!-- Accounts Center Section -->
-        <div id="accounts" class="content-section">
-             <h1>Accounts Center</h1>
-            <div class="actions-bar">
-                <button class="action-btn" onclick="addAccount()">+ Add Account</button>
-            </div>
-            <table id="accounts-table">
-                <thead>
-                    <tr>
-                        <th>Phone</th>
-                        <th>Username</th>
-                        <th>Tags</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="accounts-table-body"></tbody>
-            </table>
-        </div>
-
-        <!-- Account Settings Page (Initially Hidden) -->
-        <div id="account-settings" class="content-section">
-            <div class="settings-header">
-                <button onclick="showMainAccountsPage()">&larr; Back to Accounts</button>
-                <h1>Settings for <span id="settings-account-display-phone"></span></h1>
-                <input type="hidden" id="settings-account-phone">
+        <main class="main-content">
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="content-section">
+                <h1>Dashboard</h1>
+                <p>Welcome to Project Echo. Here's a summary of your activities.</p>
             </div>
 
-            <div class="tab-bar">
-                <button class="tab-link active" onclick="openSettingsTab(event, 'main-settings')">Main</button>
-                <button class="tab-link" onclick="openSettingsTab(event, 'proxy-settings')">Proxy</button>
-                <button class="tab-link" onclick="openSettingsTab(event, 'tags-settings')">Tags</button>
-            </div>
-
-            <div id="main-settings" class="tab-content active">
-                <div class="profile-grid">
-                    <div class="profile-fields">
-                        <h3>Profile</h3>
-                        <input type="text" id="account-first-name" placeholder="First Name">
-                        <input type="text" id="account-last-name" placeholder="Last Name">
-                        <textarea id="account-bio" placeholder="Bio (max 70 chars)" maxlength="70"></textarea>
-                        <input type="hidden" id="account-avatar-path">
-                    </div>
-                    <div class="avatar-section">
-                        <h3>Avatar</h3>
-                        <img id="avatar-preview" src="" alt="Avatar Preview">
-                        <input type="file" id="avatar-upload-input" onchange="handleAvatarUpload()" accept="image/png, image/jpeg" style="display: none;">
-                        <button onclick="document.getElementById('avatar-upload-input').click()">Upload Image</button>
+            <!-- Accounts Center Section -->
+            <div id="accounts" class="content-section">
+                <div class="section-header">
+                    <h1>Accounts Center</h1>
+                    <div class="header-actions">
+                        <md-outlined-button onclick="openTagsDialog()">Manage Tags</md-outlined-button>
+                        <md-filled-button onclick="addAccount()">
+                            Add Account
+                            <span class="material-symbols-outlined" slot="icon">add</span>
+                        </md-filled-button>
                     </div>
                 </div>
-                <div class="form-section">
-                    <h3>User Agent</h3>
-                    <div class="form-grid-3">
-                        <select id="ua-os"><option>Windows</option><option>macOS</option><option>Linux</option></select>
-                        <input type="text" id="ua-chrome-version" value="108.0.5359.215">
-                        <button class="generate-btn" onclick="generateUserAgent()">Generate</button>
-                    </div>
-                    <input type="text" id="account-user-agent-input" placeholder="Telethon System Version String">
-                </div>
-                <div class="settings-footer">
-                    <button onclick="saveAccountSettings()">Save Settings</button>
-                    <button class="action-btn" onclick="applyProfileChanges()">Apply to Telegram</button>
-                </div>
-            </div>
-
-            <div id="proxy-settings" class="tab-content">
-                <h3>Proxy Selection</h3>
-                <p>Select a proxy from the <a href="#" onclick="switchSection('resources')">Resource Manager</a>.</p>
-                <select id="account-proxy-select"></select>
-                 <div class="settings-footer">
-                    <button onclick="saveAccountSettings()">Save Settings</button>
-                </div>
-            </div>
-
-            <div id="tags-settings" class="tab-content">
-                <h3>Tag Selection</h3>
-                <p>Select tags. Add more in the <a href="#" onclick="switchSection('resources')">Resource Manager</a>.</p>
-                <div id="account-tags-selector" class="checkbox-container"></div>
-                 <div class="settings-footer">
-                    <button onclick="saveAccountSettings()">Save Settings</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Audience CRM Section -->
-        <div id="audiences" class="content-section">
-            <h1>Audience CRM</h1>
-            <div class="form-section">
-                <h2>Scrape New Audience</h2>
-                <select id="scraper-account"><option disabled selected>Select account for scraping</option></select>
-                <input type="text" id="chat-link" placeholder="Public Chat Link (e.g., t.me/some_chat)">
-                <button onclick="scrapeAudience()">Scrape Users</button>
-                <p id="scraper-status"></p>
-            </div>
-            <div class="audience-results">
-                <div class="actions-bar">
-                    <button id="save-audience-btn" style="display:none;" onclick="saveAudience()">Save Audience</button>
-                </div>
-                <table id="audience-table">
-                    <thead><tr><th>ID</th><th>Username</th><th>Name</th></tr></thead>
-                    <tbody id="audience-table-body"></tbody>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Phone</th>
+                            <th>Username</th>
+                            <th>Tags</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accounts-table-body"></tbody>
                 </table>
             </div>
-            <div class="saved-audiences">
-                <h2>Saved Audiences</h2>
-                <ul id="saved-audiences-list"></ul>
-            </div>
-        </div>
-        
-        <!-- Ad Cabinet Section -->
-        <div id="campaigns" class="content-section">
-            <div id="campaign-list-view">
-                <h1>Ad Cabinet</h1>
-                <div class="actions-bar"><button onclick="toggleCampaignForm(true)">+ New Campaign</button></div>
-                <table id="campaigns-table">
-                    <thead><tr><th>Name</th><th>Audience</th><th>Status</th><th>Actions</th></tr></thead>
-                    <tbody id="campaigns-table-body"></tbody>
-                </table>
-            </div>
-            <div id="campaign-form-container" style="display:none;">
-                <button onclick="toggleCampaignForm(false)">&larr; Back to Campaigns</button>
-                <h1>Create/Edit Campaign</h1>
-                <input type="hidden" id="campaign-id">
-                <input type="text" id="campaign-name" placeholder="Campaign Name">
-                <textarea id="campaign-message" placeholder="Your ad message..."></textarea>
-                <select id="campaign-audience-select"><option disabled selected>Select Audience</option></select>
-                <h3>Select Accounts to Send From</h3>
-                <div id="campaign-accounts-select" class="checkbox-container"></div>
-                <button onclick="saveCampaign()">Save Campaign</button>
-            </div>
-        </div>
-
-        <!-- Resources Section -->
-        <div id="resources" class="content-section">
-            <h1>Resources</h1>
-            <div class="tab-bar">
-                <button class="tab-link active" onclick="openResourceTab(event, 'proxies')">Proxies</button>
-                <button class="tab-link" onclick="openResourceTab(event, 'tags')">Tags</button>
-            </div>
-
-            <div id="proxies" class="resource-tab-content active">
-                <h2>Proxy Manager</h2>
-                <div class="form-section">
-                    <h4>Add New Proxy</h4>
-                    <div class="form-grid-4">
-                        <select id="proxy-add-type"><option>socks5</option><option>http</option></select>
-                        <input type="text" id="proxy-add-host" placeholder="Host">
-                        <input type="text" id="proxy-add-port" placeholder="Port">
-                        <input type="text" id="proxy-add-user" placeholder="Username (optional)">
-                        <input type="password" id="proxy-add-pass" placeholder="Password (optional)">
-                    </div>
-                    <button onclick="addProxy()">Add Proxy</button>
+            
+            <!-- Account Settings Page -->
+            <div id="account-settings" class="content-section">
+                <div class="section-header">
+                     <md-text-button onclick="showMainAccountsPage()">
+                        <span class="material-symbols-outlined" slot="icon">arrow_back</span>
+                        Back to Accounts
+                    </md-text-button>
+                    <h1>Settings for <span id="settings-account-display-phone"></span></h1>
+                    <input type="hidden" id="settings-account-phone">
                 </div>
-                <table id="proxies-table">
+
+                <md-tabs aria-label="Account Settings Tabs">
+                    <md-primary-tab id="tab-main-settings" aria-controls="main-settings-panel">
+                        <span class="material-symbols-outlined" slot="icon">tune</span>
+                        Main
+                    </md-primary-tab>
+                    <md-primary-tab id="tab-proxy-settings" aria-controls="proxy-settings-panel">
+                         <span class="material-symbols-outlined" slot="icon">lan</span>
+                        Proxy
+                    </md-primary-tab>
+                </md-tabs>
+
+                <div id="main-settings-panel" class="tab-panel" role="tabpanel" aria-labelledby="tab-main-settings">
+                     <div class="form-grid">
+                        <div class="avatar-section">
+                            <h3>Avatar</h3>
+                            <img id="avatar-preview" src="" alt="Avatar Preview" style="display:none;"/>
+                            <input type="file" id="avatar-upload-input" onchange="handleAvatarUpload()" accept="image/png, image/jpeg" style="display: none;">
+                            <md-outlined-button onclick="document.getElementById('avatar-upload-input').click()">
+                                Upload Image
+                            </md-outlined-button>
+                            <input type="hidden" id="account-avatar-path">
+                        </div>
+                        <div class="profile-fields">
+                             <h3>Profile</h3>
+                            <md-outlined-text-field id="account-first-name" label="First Name"></md-outlined-text-field>
+                            <md-outlined-text-field id="account-last-name" label="Last Name"></md-outlined-text-field>
+                            <md-outlined-text-field id="account-bio" type="textarea" rows="3" label="Bio (max 70 chars)" maxLength="70"></md-outlined-text-field>
+                        </div>
+                     </div>
+                     <div class="form-section">
+                        <h3>User Agent</h3>
+                         <div class="form-grid-3">
+                            <md-outlined-select id="ua-os" label="Operating System">
+                                <md-select-option selected value="Windows"></md-select-option>
+                                <md-select-option value="macOS"></md-select-option>
+                                <md-select-option value="Linux"></md-select-option>
+                            </md-outlined-select>
+                            <md-outlined-text-field id="ua-chrome-version" label="Chrome Version" value="108.0.5359.215"></md-outlined-text-field>
+                            <md-outlined-button onclick="generateUserAgent()">Generate</md-outlined-button>
+                        </div>
+                        <md-outlined-text-field id="account-user-agent-input" label="Telethon System Version String" style="width: 100%;"></md-outlined-text-field>
+                    </div>
+                    <div class="form-actions">
+                        <md-outlined-button onclick="saveAccountSettings()">Save Settings</md-outlined-button>
+                        <md-filled-button onclick="applyProfileChanges()">Apply to Telegram</md-filled-button>
+                    </div>
+                </div>
+
+                <div id="proxy-settings-panel" class="tab-panel" role="tabpanel" aria-labelledby="tab-proxy-settings">
+                    <h3>Proxy Selection</h3>
+                    <p>Select a proxy from the list below. You can add more in the <a href="#" onclick="switchSection('proxies')">Proxies</a> section.</p>
+                    <md-outlined-select id="account-proxy-select" label="Select Proxy">
+                        <md-select-option value=""></md-select-option> <!-- No Proxy -->
+                    </md-outlined-select>
+                    <div class="form-actions">
+                        <md-filled-button onclick="saveAccountSettings()">Save Proxy Setting</md-filled-button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Audience CRM Section -->
+            <div id="audiences" class="content-section">
+                 <div class="section-header"><h1>Audience CRM</h1></div>
+                 <!-- Coming soon -->
+            </div>
+
+            <!-- Ad Cabinet Section -->
+            <div id="campaigns" class="content-section">
+                <div class="section-header"><h1>Ad Cabinet</h1></div>
+                <!-- Coming soon -->
+            </div>
+
+            <!-- Proxies Section -->
+            <div id="proxies" class="content-section">
+                <div class="section-header"><h1>Proxy Manager</h1></div>
+                <div class="form-section card">
+                    <h3>Add New Proxy</h3>
+                    <div class="form-grid-responsive">
+                         <md-outlined-select id="proxy-add-type" label="Type">
+                            <md-select-option selected value="socks5">SOCKS5</md-select-option>
+                            <md-select-option value="http">HTTP</md-select-option>
+                        </md-outlined-select>
+                        <md-outlined-text-field id="proxy-add-host" label="Host / IP Address"></md-outlined-text-field>
+                        <md-outlined-text-field id="proxy-add-port" label="Port" type="number"></md-outlined-text-field>
+                        <md-outlined-text-field id="proxy-add-user" label="Username (optional)"></md-outlined-text-field>
+                        <md-outlined-text-field id="proxy-add-pass" label="Password (optional)" type="password"></md-outlined-text-field>
+                    </div>
+                    <div class="form-actions">
+                         <md-filled-button onclick="addProxy()">Add Proxy</md-filled-button>
+                    </div>
+                </div>
+                <table class="data-table">
                     <thead><tr><th>Host</th><th>Port</th><th>Username</th><th>Status</th><th>Actions</th></tr></thead>
                     <tbody id="proxies-table-body"></tbody>
                 </table>
             </div>
 
-            <div id="tags" class="resource-tab-content">
-                <h2>Tag Manager</h2>
-                <div class="form-section">
-                    <h4>Add New Tag</h4>
-                    <input type="text" id="tag-add-name" placeholder="Tag name">
-                    <button onclick="addTag()">Add Tag</button>
-                </div>
-                <div id="tags-list" class="tags-container"></div>
-            </div>
-        </div>
-
-        <!-- Other Sections -->
-        <div id="tasks" class="content-section"><p>Task Center - Coming Soon</p></div>
-        <div id="settings" class="content-section"><p>Settings - Coming Soon</p></div>
+            <!-- Other placeholder sections -->
+            <div id="tasks" class="content-section"><div class="section-header"><h1>Task Center</h1></div></div>
+            <div id="settings" class="content-section"><div class="section-header"><h1>Settings</h1></div></div>
+        </main>
     </div>
+
+    <!-- Tags Management Dialog -->
+    <md-dialog id="tags-dialog">
+        <div slot="headline">Manage Account Tags</div>
+        <div slot="content" class="dialog-content">
+            <div class="form-section">
+                <md-outlined-text-field id="tag-add-name" label="New tag name"></md-outlined-text-field>
+                <md-filled-button onclick="addTag()">Add Tag</md-filled-button>
+            </div>
+            <div id="tags-list" class="tags-container"></div>
+        </div>
+        <div slot="actions">
+            <md-text-button onclick="document.getElementById('tags-dialog').close()">Close</md-text-button>
+        </div>
+    </md-dialog>
     
     <script src="/static/app.js"></script>
 </body>
