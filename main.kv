@@ -8,11 +8,10 @@
     orientation: 'vertical'
     size_hint: None, None
     size: dp(80), dp(72)
-    # FIX: Remove horizontal padding to allow children to center across the full width
     padding: [0, dp(12), 0, dp(8)]
     spacing: dp(4)
 
-    # FIX: Add a canvas to make the whole widget area touch-sensitive for clicks.
+    # This canvas makes the entire widget area sensitive to clicks.
     canvas.before:
         Color:
             rgba: 0, 0, 0, 0 # Transparent background
@@ -20,21 +19,20 @@
             pos: self.pos
             size: self.size
 
-    # FIX: Icon and Label are now direct children, centered correctly.
+    # FIX: Use pos_hint for a more robust centering method.
     MDIcon:
         id: icon
         icon: root.icon
-        halign: 'center'
+        pos_hint: {'center_x': 0.5}
         font_size: dp(24)
-        size_hint_x: 1  # Take full width to allow horizontal centering
+        adaptive_size: True # Shrink to content size before centering
 
     MDLabel:
         text: root.text
-        halign: 'center'
+        pos_hint: {'center_x': 0.5}
         font_style: "Caption"
         font_size: "10sp"
-        adaptive_height: True
-        size_hint_x: 1  # Take full width to allow horizontal centering
+        adaptive_size: True # Shrink to content size before centering
 
 # =========================================================================
 # >> MAIN LAYOUT KV
