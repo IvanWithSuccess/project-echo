@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project Echo</title>
 
-    <!-- Material Symbols -->
+    <!-- Google Fonts (for icons and text) -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
-    <!-- Material 3 Web Components -->
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@material/web@1.0.0/all.js?render"></script>
+    <!-- CORRECT: Material 3 Styles (latest stable) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@material/web@1.4.1/dist/material.css">
+
+    <!-- CORRECT: Material 3 Web Components (latest stable) -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@material/web@1.4.1/all.js?render"></script>
 
     <!-- Custom Styles -->
     <link rel="stylesheet" href="/static/style.css">
@@ -25,7 +26,7 @@
     <div class="main-layout">
         <!-- Side Navigation Rail -->
         <md-navigation-rail id="nav-rail">
-            <md-navigation-rail-item id="nav-dashboard" class="nav-item active" onclick="switchSection('dashboard')">
+            <md-navigation-rail-item id="nav-dashboard" class="nav-item" active onclick="switchSection('dashboard')">
                 <md-icon slot="active-icon">dashboard</md-icon>
                 <md-icon slot="inactive-icon">dashboard_outlined</md-icon>
                 <div slot="label">Dashboard</div>
