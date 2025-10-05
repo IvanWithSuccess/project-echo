@@ -5,14 +5,24 @@ import os
 # --- Basic Flask App Setup ---
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
-# --- CRITICAL CACHE FIX ---
-# This configuration tells the browser to always check for a new version of static files
-# and not to use a cached version. Setting max_age to 0 is the key.
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
-
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+# ==========================================================================
+# >> AGGRESSIVE CACHE BUSTING (DEFINITIVE FIX)
+# ==========================================================================
+@app.after_request
+def add_header(response):
+    """
+    Add headers to both force latest content and prevent caching.
+    This is the most aggressive and reliable method.
+    """
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache' # for HTTP/1.0 compatibility
+    response.headers['Expires'] = '0' # force expiration
+    return response
 
 # ==========================================================================
 # >> CORE ROUTES
