@@ -15,8 +15,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@material/web@1.4.1/dist/material.css">
     <script type="module" src="https://cdn.jsdelivr.net/npm/@material/web@1.4.1/all.js?render"></script>
 
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="/static/style.css">
+    <!-- DEFINITIVE FIX: Custom Styles with Cache Buster -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=cache_buster) }}">
+
 </head>
 <body>
 
@@ -76,8 +77,8 @@
         </main>
     </div>
 
-    <!-- Custom App Logic -->
-    <script src="/static/app.js"></script>
+    <!-- DEFINITIVE FIX: Custom App Logic with Cache Buster -->
+    <script src="{{ url_for('static', filename='app.js', v=cache_buster) }}"></script>
 
 </body>
 </html>

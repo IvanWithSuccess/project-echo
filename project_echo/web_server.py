@@ -1,6 +1,7 @@
 import logging
 from flask import Flask, render_template, jsonify, request
 import os
+import time
 
 # --- Basic Flask App Setup ---
 app = Flask(__name__, template_folder='templates', static_folder='static')
@@ -11,31 +12,20 @@ logging.basicConfig(level=logging.INFO,
 
 
 # ==========================================================================
-# >> AGGRESSIVE CACHE BUSTING (DEFINITIVE FIX)
-# ==========================================================================
-@app.after_request
-def add_header(response):
-    """
-    Add headers to both force latest content and prevent caching.
-    This is the most aggressive and reliable method.
-    """
-    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-    response.headers['Pragma'] = 'no-cache' # for HTTP/1.0 compatibility
-    response.headers['Expires'] = '0' # force expiration
-    return response
-
-# ==========================================================================
-# >> CORE ROUTES
+# >> ROUTES
 # ==========================================================================
 
 @app.route('/')
 def index():
-    """Serves the main single-page application."""
-    logging.info("Serving index.html")
-    return render_template('index.html')
+    """Serves the main single-page application with a cache-busting query string."""
+    logging.info("Serving index.html with cache buster.")
+    # DEFINITIVE FIX: Generate a version based on the current time.
+    # This is passed to the template to append to static file URLs.
+    cache_buster = str(time.time())
+    return render_template('index.html', cache_buster=cache_buster)
 
 
-# This is a placeholder for our API functions. We will add them later.
+# This is a placeholder for our API functions.
 @app.route('/api/placeholder')
 def placeholder():
     return jsonify({"message": "API is working"})
