@@ -42,10 +42,14 @@ class AccountsPanel(MDBoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.dialog = None
-        # on_kv_post is a more reliable method to call after the UI is built
-        self.on_kv_post = self.create_accounts_table
+        # FIX: Initialize data_table to None for robustness
+        self.data_table = None
 
-    def create_accounts_table(self, *args):
+    def on_kv_post(self, base_widget):
+        """Called after the kv file is loaded. Creates the data table."""
+        self.create_accounts_table()
+
+    def create_accounts_table(self):
         """Creates and populates the MDDataTable widget."""
         self.data_table = MDDataTable(
             size_hint=(1, 1),
@@ -94,8 +98,7 @@ class AccountsPanel(MDBoxLayout):
         tags = content.ids.tags_field.text
         description = content.ids.description_field.text
 
-        # Add the new row to the data table
-        if phone: # Add only if phone number is provided
+        if phone and self.data_table:
             self.data_table.add_row((phone, "New", f"[{tags}]", description))
         
         self.close_dialog()
