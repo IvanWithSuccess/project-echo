@@ -36,13 +36,18 @@ class DialogContent(MDBoxLayout):
     """Content widget for the 'Add Account' dialog."""
     pass
 
-
 class AccountsPanel(MDBoxLayout):
     """A panel that displays a table of accounts and provides management options."""
+    
+    # FIX: Data for the SpeedDial button
+    speed_dial_data = {
+        'cloud-upload-outline': 'Import from API',
+        'pencil': 'Add manually',
+    }
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.dialog = None
-        # FIX: Initialize data_table to None for robustness
         self.data_table = None
 
     def on_kv_post(self, base_widget):
@@ -60,12 +65,18 @@ class AccountsPanel(MDBoxLayout):
                 ("Tags", dp(30)),
                 ("Description", dp(40)),
             ],
-            row_data=[
-                ("+1234567890", "Active", "[Test, VIP]", "Main test account"),
-                ("+0987654321", "Inactive", "[New]", "Secondary account"),
-            ]
+            row_data=[]
         )
         self.ids.table_container.add_widget(self.data_table)
+
+    # FIX: Callback for the SpeedDial button
+    def speed_dial_callback(self, instance):
+        """Handle actions from the speed dial buttons."""
+        icon = instance.icon
+        if icon == 'pencil':
+            self.show_add_account_dialog()
+        elif icon == 'cloud-upload-outline':
+            print("Action: Show 'API Import' dialog (not implemented yet).")
 
     def show_add_account_dialog(self):
         """Shows the 'Add Account' dialog."""
@@ -85,6 +96,10 @@ class AccountsPanel(MDBoxLayout):
                     ),
                 ],
             )
+        # Clear fields before opening
+        self.dialog.content_cls.ids.phone_field.text = ""
+        self.dialog.content_cls.ids.tags_field.text = ""
+        self.dialog.content_cls.ids.description_field.text = ""
         self.dialog.open()
 
     def close_dialog(self, *args):
