@@ -49,7 +49,6 @@ def load_json(file_path, default=None):
         return default if default is not None else []
 
 def save_json(file_path, data):
-    # No app context needed for simple file writes
     with open(file_path, 'w') as f: 
         json.dump(data, f, indent=2)
 
@@ -87,7 +86,8 @@ def index():
 def uploaded_file(filename):
     return send_from_directory(UPLOADS_DIR, filename)
 
-# --- API: Accounts ---
+# --- API Routes (Truncated for brevity in this example) ---
+
 @app.route('/api/accounts')
 def get_accounts():
     return jsonify(load_accounts())
@@ -212,7 +212,7 @@ def upload_avatar():
         file.save(path)
         return jsonify({"status": "ok", "path": path})
 
-# --- API: Proxies ---
+
 @app.route('/api/proxies')
 def get_proxies():
     return jsonify(load_proxies())
@@ -244,7 +244,7 @@ def check_proxy():
     loop.close()
     return jsonify({"status": "ok", "proxy_status": 'working' if is_working else 'not working'})
 
-# --- API: Tags ---
+
 @app.route('/api/tags')
 def get_tags():
     return jsonify(load_tags())
@@ -270,7 +270,7 @@ def delete_tag():
     save_accounts(accounts)
     return jsonify({"status": "ok", "message": "Tag deleted"})
 
-# --- API: Audiences ---
+
 @app.route('/api/audiences/scrape', methods=['POST'])
 def scrape_audience():
     data = request.json
@@ -288,7 +288,7 @@ def scrape_audience():
         return jsonify({"status": "ok", "users": users})
     return jsonify({"status": "error", "message": status}), 500
 
-@app.route('/api/audiences', methods=['GET'])
+@app.route('/api/audiences')
 def list_audiences():
     if not os.path.exists(AUDIENCE_DIR): return jsonify([])
     return jsonify([f for f in os.listdir(AUDIENCE_DIR) if f.endswith('.json')])
@@ -303,7 +303,7 @@ def save_audience():
     save_json(os.path.join(AUDIENCE_DIR, filename), users)
     return jsonify({"status": "ok", "message": f"Audience '{name}' saved."})
 
-@app.route('/api/audiences/<filename>', methods=['GET'])
+@app.route('/api/audiences/<filename>')
 def get_audience(filename):
     filepath = os.path.join(AUDIENCE_DIR, secure_filename(filename))
     if not os.path.exists(filepath): return jsonify({"status": "error", "message": "File not found"}), 404
@@ -317,8 +317,7 @@ def delete_audience():
     if os.path.exists(filepath): os.remove(filepath)
     return jsonify({"status": "ok", "message": "Audience deleted."})
 
-# --- API: Campaigns ---
-@app.route('/api/campaigns', methods=['GET'])
+@app.route('/api/campaigns')
 def get_campaigns():
     return jsonify(load_campaigns())
 
@@ -363,8 +362,6 @@ def run_campaign_thread(flask_app, campaign, users, account_phones, message):
         update_campaign_status(campaign_id, "Running", f"0/{len(users)}")
         logging.info(f"[Campaign:{campaign_id}] Starting...")
 
-        # This part needs a better distribution and progress tracking mechanism
-        # For now, let's just process them sequentially for simplicity
         sent_count = 0
         for i, user in enumerate(users):
             if campaign_id not in active_campaign_threads: break
@@ -373,8 +370,6 @@ def run_campaign_thread(flask_app, campaign, users, account_phones, message):
             account = get_account_by_phone(phone_to_use)
             if not account: continue
 
-            # This creates a new loop for every message, which is inefficient
-            # A better design would be a worker pool or a single loop per account worker
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             service = TelegramService(phone_to_use, API_ID, API_HASH, loop=loop, **account.get('settings', {}))
@@ -395,9 +390,3 @@ def run_campaign_thread(flask_app, campaign, users, account_phones, message):
         update_campaign_status(campaign_id, final_status, f"{sent_count}/{len(users)}")
         logging.info(f"[Campaign:{campaign_id}] {final_status}.")
         if campaign_id in active_campaign_threads: del active_campaign_threads[campaign_id]
-
-
-# --- Main Execution ---
-if __name__ == '__main__':
-    setup_directories()
-    app.run(debug=True, threaded=True, use_reloader=False)

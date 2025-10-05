@@ -1,19 +1,15 @@
-
-import threading
-import webbrowser
 from project_echo.web_server import app, setup_directories
 
-HOST = "127.0.0.1"
-PORT = 5000
-
-def run_app():
-    """Runs the Flask app."""
-    setup_directories()
-    app.run(host=HOST, port=PORT, debug=True, use_reloader=False) # use_reloader=False is important for this setup
-
 if __name__ == "__main__":
-    # Open the web browser in a separate thread
-    webbrowser.open_new(f"http://{HOST}:{PORT}")
-    
-    # Run the Flask app in the main thread
-    run_app()
+    # This function ensures that all necessary folders like 'sessions', 'audiences', etc. exist.
+    setup_directories()
+
+    # We removed the automatic browser opening because it can be unreliable.
+    # Instead, we print a clear message for you to open the browser manually.
+    print("\n--- Project Echo Server is Starting ---")
+    print("--- Open your browser and navigate to: http://127.0.0.1:5000 ---")
+    print("--- Press CTRL+C here to stop the server. ---\n")
+
+    # Run the Flask web server.
+    # use_reloader=False is critical for the background campaign threads to work correctly.
+    app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)
