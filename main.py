@@ -1,19 +1,25 @@
 import os
-import logging
 from project_echo.web_server import app, setup_directories
+import webbrowser
+import threading
 
-if __name__ == "__main__":
-    # Set up necessary folders like 'sessions', 'uploads', etc.
+# ==========================================================================
+# >> CONFIGURATION
+# ==========================================================================
+HOST = "127.0.0.1"
+PORT = 5000
+URL = f"http://{HOST}:{PORT}"
+
+# ==========================================================================
+# >> MAIN EXECUTION
+# ==========================================================================
+if __name__ == '__main__':
+    # Ensure necessary directories exist before starting
     setup_directories()
 
-    # Get the host and port from environment variables or use defaults
-    host = os.environ.get("FLASK_RUN_HOST", "127.0.0.1")
-    port = int(os.environ.get("FLASK_RUN_PORT", 5000))
+    # Open the web browser automatically after a short delay
+    # This gives the server a moment to start up
+    threading.Timer(1, lambda: webbrowser.open_new(URL)).start()
 
-    logging.info(f"Starting Project Echo server at http://{host}:{port}")
-    
-    # --- CRITICAL --- 
-    # debug=True automatically enables the reloader and disables caching.
-    # This is essential for development.
-    # use_reloader=False is set to prevent conflicts with background tasks if we add them later.
-    app.run(host=host, port=port, debug=True, use_reloader=False)
+    # Run the Flask web server
+    app.run(host=HOST, port=PORT, debug=True, use_reloader=False)
