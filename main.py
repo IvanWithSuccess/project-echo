@@ -11,6 +11,7 @@ from kivymd.icon_definitions import md_icons
 # >> KIVY LANG DEFINITION FOR TABS
 # =========================================================================
 # Using Builder is a Kivy best practice for defining UI structure.
+# FIX: Removed the invalid '<Tab>:' rule which caused the ParserException.
 KV = """
 MDBoxLayout:
     orientation: "vertical"
@@ -21,11 +22,6 @@ MDBoxLayout:
     MDTabs:
         id: tabs
         on_tab_switch: app.on_tab_switch(*args)
-
-<Tab>:
-    # This is the content for each tab.
-    # We will populate it from the Python code.
-    pass
 """
 
 # =========================================================================
@@ -123,8 +119,13 @@ MDLabel:
             {"text": "Active", "on_release": lambda x="Active": self.set_status(x)},
             {"text": "Inactive", "on_release": lambda x="Inactive": self.set_status(x)},
         ]
+        # We need to find the button to anchor the menu. This is a bit brittle and could be improved.
+        # It assumes the Accounts tab is the first one added.
+        accounts_tab_content = self.root.ids.tabs.get_tab_list()[0].children[0]
+        status_button = accounts_tab_content.children[1].children[0]
+
         self.status_menu = MDDropdownMenu(
-            caller=self.root.ids.tabs.get_tab_list()[0].children[0].children[1].children[0], # Bit complex, but gets the button
+            caller=status_button, 
             items=menu_items,
             width_mult=4,
         )
@@ -147,9 +148,9 @@ MDLabel:
         self.status_menu.dismiss()
 
 
-# =========================================================================
+# ==========================================================================
 # >> MAIN EXECUTION
-# =========================================================================
+# ==========================================================================
 
 if __name__ == '__main__':
     ProjectEchoApp().run()
