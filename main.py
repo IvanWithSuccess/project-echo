@@ -4,11 +4,13 @@ from kivymd.app import MDApp
 
 # --- Import the custom screen and new Tab components ---
 from project_echo.screens.accounts_screen import AccountsPanel
-from kivymd.uix.tabs import MDTabs, MDTabsItem, MDTabsItemIcon, MDTabsItemText
+# FIX: Corrected the import path from .tabs to .tab and removed non-existent classes
+from kivymd.uix.tab import MDTabs, MDTabsItem
 from kivymd.uix.label import MDLabel
 
 # --- Load the KV file for the Accounts screen ---
 Builder.load_file("project_echo/screens/accounts_screen.kv")
+
 
 # =========================================================================
 # >> MAIN APP CLASS
@@ -44,9 +46,8 @@ MDBoxLayout:
         }
         for tab_name, icon_name in tabs_data.items():
             # FIX: Switched to the new KivyMD 2.0 tab creation API
-            item = MDTabsItem()
-            item.add_widget(MDTabsItemIcon(icon=icon_name))
-            item.add_widget(MDTabsItemText(text=tab_name))
+            # Icon and text are now direct properties of MDTabsItem
+            item = MDTabsItem(text=tab_name, icon=icon_name)
 
             if tab_name == "Accounts":
                 item.add_widget(AccountsPanel())
@@ -56,6 +57,7 @@ MDBoxLayout:
                     halign="center"
                 ))
             self.root.ids.tabs.add_widget(item)
+
 
 # ==========================================================================
 # >> MAIN EXECUTION
