@@ -11,7 +11,8 @@ from kivy.properties import StringProperty
 # --- FIX: Import the correct base classes for a custom clickable layout ---
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.behaviors import ButtonBehavior
-from kivymd.uix.behaviors import CircularRippleBehavior
+# --- FIX: Removed CircularRippleBehavior as it was conflicting with ButtonBehavior ---
+# from kivymd.uix.behaviors import CircularRippleBehavior
 
 # Import our custom screen content
 from project_echo.screens.accounts_screen import AccountsPanel
@@ -19,8 +20,9 @@ from project_echo.screens.accounts_screen import AccountsPanel
 # Load KV files
 Builder.load_file("project_echo/screens/accounts_screen.kv")
 
-# --- FIX: Define NavButton as a clickable layout with ripple effect ---
-class NavButton(MDBoxLayout, ButtonBehavior, CircularRippleBehavior):
+# --- FIX: Defined NavButton as a clickable layout without the ripple effect ---
+# This ensures that the on_release event from ButtonBehavior is triggered correctly.
+class NavButton(ButtonBehavior, MDBoxLayout):
     # Add properties for both text and icon so they can be set from Python
     text = StringProperty("")
     icon = StringProperty("")
