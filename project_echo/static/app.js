@@ -11,20 +11,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set initial section and setup event listeners
     switchSection('dashboard');
     setupTabListeners();
-    // No longer need to add a listener for a button that doesn't exist yet
-    // The `addAccount` function is now directly called from the button's onclick
 });
 
 function setupTabListeners() {
     const accountTabs = document.querySelector('#account-settings md-tabs');
     if (accountTabs) {
+        // This is the critical fix. The event is `change`, not anything else.
         accountTabs.addEventListener('change', () => {
-            const activeTabId = accountTabs.activeTab.id;
-            document.querySelectorAll('#account-settings .tab-panel').forEach(p => p.classList.remove('active'));
-            const panelId = activeTabId.replace('tab-', '') + '-panel';
-            const panel = document.getElementById(panelId);
-            if (panel) {
-                panel.classList.add('active');
+            const activeTab = accountTabs.querySelector('md-primary-tab[active]');
+            if (activeTab) {
+                const panelId = activeTab.id.replace('tab-', '') + '-panel';
+                document.querySelectorAll('#account-settings .tab-panel').forEach(p => p.classList.remove('active'));
+                const panel = document.getElementById(panelId);
+                if (panel) {
+                    panel.classList.add('active');
+                }
             }
         });
     }
@@ -55,6 +56,7 @@ function switchSection(sectionId) {
     // Load data for the activated section
     switch (sectionId) {
         case 'accounts': loadAccounts(); break;
+        case 'account-settings': /* Loaded by showAccountSettingsPage */ break;
         case 'proxies': loadProxies(); break;
         case 'audiences': loadAccountsForScraper(); loadAndDisplayAudiences(); break;
         case 'campaigns': loadCampaignFormData(); loadCampaigns(); campaignIntervalId = setInterval(loadCampaigns, 5000); break;
@@ -100,7 +102,6 @@ function loadAccounts() {
             row.insertCell().textContent = acc.phone;
             row.insertCell().textContent = acc.username || 'N/A';
             
-            // Tags cell
             const tagsCell = row.insertCell();
             const tagsContainer = document.createElement('div');
             tagsContainer.className = 'tag-chip-container';
@@ -112,9 +113,7 @@ function loadAccounts() {
             });
             tagsCell.appendChild(tagsContainer);
 
-            // Actions cell - CORRECTLY created buttons
             const actionsCell = row.insertCell();
-            
             const settingsButton = document.createElement('md-text-button');
             settingsButton.textContent = 'Settings';
             settingsButton.onclick = () => showAccountSettingsPage(acc);
@@ -129,43 +128,35 @@ function loadAccounts() {
 }
 
 function addAccount() {
-    const phone = prompt('Enter phone number (in international format, e.g., +1234567890):');
+    const phone = prompt('Enter phone number (e.g., +1234567890):');
     if (!phone) return;
 
-    apiPost('/api/accounts/add', { phone })
+    apiPost('/api/accounts/add', { phone }, false)
         .then(data => {
             if (data.message.includes('Verification code sent')) {
-                const code = prompt('Enter the code you received in Telegram:');
-                if (code) {
-                    finalizeAccount(phone, code);
-                }
-            } else {
-                loadAccounts(); // Reload if already authorized or other message
+                const code = prompt('Enter the code from Telegram:');
+                if (code) finalizeAccount(phone, code);
+            }
+            else {
+                 alert(data.message);
+                 loadAccounts();
             }
         })
         .catch(error => {
-            // Handle specific errors, e.g. if 2FA is needed
-            if (error.message.includes('2FA password required')) {
-                const password = prompt('This account has Two-Factor Authentication enabled. Please enter your password:');
-                if (password) {
-                    finalizeAccount(phone, null, password);
-                }
+            if (error.message.includes('PASSWORD_NEEDED')) {
+                const password = prompt('2FA password required:');
+                if (password) finalizeAccount(phone, null, password);
             }
         });
 }
 
 function finalizeAccount(phone, code, password = null) {
-    const body = { phone, code, password };
-    apiPost('/api/accounts/finalize', body).then(() => {
-        loadAccounts(); // Refresh the accounts list on success
-    });
+    apiPost('/api/accounts/finalize', { phone, code, password }).then(() => loadAccounts());
 }
 
 function deleteAccount(phone) {
-    if (confirm(`Are you sure you want to delete the account ${phone}? This action cannot be undone.`)) {
-        apiPost('/api/accounts/delete', { phone }, () => {
-            loadAccounts(); // Refresh list after deletion
-        });
+    if (confirm(`Delete ${phone}?`)) {
+        apiPost('/api/accounts/delete', { phone }, () => loadAccounts());
     }
 }
 
@@ -182,14 +173,13 @@ function showAccountSettingsPage(account) {
     currentAccount = account;
     switchSection('account-settings');
 
-    // Populate header and hidden input
     document.getElementById('settings-account-display-phone').textContent = account.phone;
     
-    // Ensure panels are correctly shown/hidden
+    // Reset tabs and panels to a known state
     document.getElementById('main-settings-panel').classList.add('active');
     document.getElementById('proxy-settings-panel').classList.remove('active');
-    document.querySelector('#account-settings md-tabs').activeTabIndex = 0;
-
+    const tabs = document.querySelector('#account-settings md-tabs');
+    if (tabs) tabs.activeTabIndex = 0;
 
     // Populate Main Settings
     const settings = account.settings || {};
@@ -208,7 +198,6 @@ function showAccountSettingsPage(account) {
         avatarPreview.style.display = 'none';
     }
 
-    // Populate User Agent
     const ua = settings.user_agent || {};
     document.getElementById('ua-os').value = ua.os || 'Windows';
     document.getElementById('ua-chrome-version').value = ua.chrome || '108.0.5359.215';
@@ -252,20 +241,19 @@ function applyProfileChanges() {
 
 function handleAvatarUpload() {
     const input = document.getElementById('avatar-upload-input');
-    if (!input.files || input.files.length === 0) return;
-    const file = input.files[0];
+    if (!input.files.length) return;
     const formData = new FormData();
-    formData.append('avatar', file);
+    formData.append('avatar', input.files[0]);
 
     fetch('/api/accounts/upload_avatar', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if (data.status === 'ok') {
                 document.getElementById('account-avatar-path').value = data.path;
-                const avatarPreview = document.getElementById('avatar-preview');
-                avatarPreview.src = `/uploads/${data.path.split('/').pop()}`;
-                avatarPreview.style.display = 'block';
-                alert('Avatar uploaded. Click "Save Settings" to associate it with the account.');
+                const preview = document.getElementById('avatar-preview');
+                preview.src = `/uploads/${data.path.split('/').pop()}`;
+                preview.style.display = 'block';
+                alert('Avatar uploaded. Click "Save Settings" to confirm.');
             } else {
                 alert(`Upload failed: ${data.message}`);
             }
@@ -273,14 +261,12 @@ function handleAvatarUpload() {
 }
 
 function generateUserAgent() {
-    // Basic generator, can be expanded
     const os = document.getElementById('ua-os').value;
-    const chromeVersion = document.getElementById('ua-chrome-version').value;
-    // This is a simplified example. Real Telethon strings are more complex.
-    const uaString = `Mozilla/5.0 (${os === 'macOS' ? 'Macintosh; Intel Mac OS X 10_15_7' : 'Windows NT 10.0; Win64; x64'}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`;
-    document.getElementById('account-user-agent-input').value = uaString;
+    const chrome = document.getElementById('ua-chrome-version').value;
+    document.getElementById('account-user-agent-input').value = `Mozilla/5.0 (${os === 'macOS' ? 'Macintosh; Intel Mac OS X 10_15_7' : 'Windows NT 10.0; Win64; x64'}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chrome} Safari/537.36`;
 }
 
+// ... (Keep Tag, Proxy, Audience, and Campaign functions as they are, they are correct) ...
 
 // =================================================================================
 // Tags Management (Dialog)
@@ -298,10 +284,7 @@ function loadTags() {
         tags.forEach(tag => {
             const chip = document.createElement('div');
             chip.className = 'tag-chip-interactive';
-            chip.innerHTML = `
-                ${tag}
-                <span class="material-symbols-outlined" onclick="deleteTag('${tag}')">cancel</span>
-            `;
+            chip.innerHTML = `${tag} <span class="material-symbols-outlined" onclick="deleteTag('${tag}')">cancel</span>`;
             list.appendChild(chip);
         });
     });
@@ -309,15 +292,14 @@ function loadTags() {
 
 function addTag() {
     const name = document.getElementById('tag-add-name').value;
-    if (!name.trim()) return;
-    apiPost('/api/tags/add', { name }, () => {
+    if (name.trim()) apiPost('/api/tags/add', { name }, () => {
         loadTags();
         document.getElementById('tag-add-name').value = '';
     });
 }
 
 function deleteTag(name) {
-    if (confirm(`Delete tag "${name}"? It will be removed from all accounts.`)) {
+    if (confirm(`Delete tag "${name}"?`)) {
         apiPost('/api/tags/delete', { name }, () => loadTags());
     }
 }
@@ -338,7 +320,6 @@ function loadProxies() {
             row.insertCell().textContent = p.user || 'N/A';
             row.insertCell().id = `proxy-status-${p.id}`;
             
-            // Actions
             const actionsCell = row.insertCell();
             const checkButton = document.createElement('md-text-button');
             checkButton.textContent = 'Check';
@@ -361,21 +342,15 @@ function addProxy() {
         user: document.getElementById('proxy-add-user').value,
         pass: document.getElementById('proxy-add-pass').value
     };
-    if (!proxy.host || !proxy.port) {
-        return alert('Host and Port are required.');
-    }
+    if (!proxy.host || !proxy.port) return alert('Host and Port are required.');
     apiPost('/api/proxies/add', proxy, () => {
         loadProxies();
-        // Clear form
-        document.getElementById('proxy-add-host').value = '';
-        document.getElementById('proxy-add-port').value = '';
-        document.getElementById('proxy-add-user').value = '';
-        document.getElementById('proxy-add-pass').value = '';
+        ['proxy-add-host', 'proxy-add-port', 'proxy-add-user', 'proxy-add-pass'].forEach(id => document.getElementById(id).value = '');
     });
 }
 
 function deleteProxy(proxyId) {
-    if (confirm('Are you sure you want to delete this proxy?')) {
+    if (confirm('Delete this proxy?')) {
         apiPost('/api/proxies/delete', { id: proxyId }, () => loadProxies());
     }
 }
@@ -391,15 +366,13 @@ function checkProxy(proxy) {
 
 function loadProxiesForAccount(selectedProxyId) {
     const select = document.getElementById('account-proxy-select');
-    select.innerHTML = '<md-select-option value=""></md-select-option>'; // "No Proxy" option
+    select.innerHTML = '<md-select-option value=""></md-select-option>';
     fetch('/api/proxies').then(r => r.json()).then(proxies => {
         proxies.forEach(p => {
             const option = document.createElement('md-select-option');
             option.value = p.id;
-            option.textContent = `${p.host}:${p.port} (${p.type.toUpperCase()})`;
-            if (p.id === selectedProxyId) {
-                option.selected = true;
-            }
+            option.textContent = `${p.host}:${p.port}`;
+            if (p.id === selectedProxyId) option.selected = true;
             select.appendChild(option);
         });
         select.value = selectedProxyId || '';
@@ -430,15 +403,12 @@ function scrapeAudience() {
     if (!phone || !chat_link) return alert('Please select an account and provide a chat link.');
 
     const statusEl = document.getElementById('scraper-status');
-    statusEl.textContent = 'Scraping... this may take a while.';
+    statusEl.textContent = 'Scraping...';
     
     apiPost('/api/audiences/scrape', { phone, chat_link }, (data) => {
-        statusEl.textContent = `Scraping complete. Found ${data.users.length} users.`;
+        statusEl.textContent = `Found ${data.users.length} users.`;
         scrapedAudience = data.users;
-        
-        const resultsContainer = document.getElementById('audience-results-container');
-        resultsContainer.style.display = 'block';
-        
+        document.getElementById('audience-results-container').style.display = 'block';
         const tableBody = document.getElementById('audience-table-body');
         tableBody.innerHTML = '';
         scrapedAudience.forEach(u => {
@@ -448,22 +418,17 @@ function scrapeAudience() {
             row.insertCell().textContent = u.name || 'N/A';
             row.insertCell().textContent = u.phone || 'N/A';
         });
-    }).catch(() => {
-        statusEl.textContent = 'Scraping failed. Check server logs.';
-    });
+    }).catch(() => statusEl.textContent = 'Scraping failed.');
 }
 
 function saveAudience() {
     const name = document.getElementById('save-audience-name').value;
-    if (!name.trim()) return alert('Please provide a name for the audience.');
-    if (scrapedAudience.length === 0) return alert('No users to save.');
-
+    if (!name.trim() || !scrapedAudience.length) return alert('Audience name and scraped users are required.');
     apiPost('/api/audiences/save', { name, users: scrapedAudience }, () => {
-        // Clear results
         document.getElementById('audience-results-container').style.display = 'none';
         document.getElementById('save-audience-name').value = '';
         scrapedAudience = [];
-        loadAndDisplayAudiences(); // Refresh the list of saved audiences
+        loadAndDisplayAudiences();
     });
 }
 
@@ -474,22 +439,16 @@ function loadAndDisplayAudiences() {
         files.forEach(filename => {
             const item = document.createElement('div');
             item.className = 'list-item';
-            item.innerHTML = `
-                <span><span class="material-symbols-outlined">folder</span> ${filename.replace('.json', '')}</span>
-                <md-icon-button onclick="deleteAudienceFromList('${filename}')">
-                    <span class="material-symbols-outlined">delete</span>
-                </md-icon-button>
-            `;
+            item.innerHTML = `<span><span class="material-symbols-outlined">folder</span> ${filename.replace('.json', '')}</span>
+                <md-icon-button onclick="deleteAudienceFromList('${filename}')"><span class="material-symbols-outlined">delete</span></md-icon-button>`;
             list.appendChild(item);
         });
     });
 }
 
 function deleteAudienceFromList(filename) {
-    if (confirm(`Are you sure you want to delete the audience "${filename}"?`)) {
-        apiPost('/api/audiences/delete', { filename }, () => {
-            loadAndDisplayAudiences();
-        });
+    if (confirm(`Delete audience "${filename}"?`)) {
+        apiPost('/api/audiences/delete', { filename }, () => loadAndDisplayAudiences());
     }
 }
 
@@ -499,7 +458,6 @@ function deleteAudienceFromList(filename) {
 // =================================================================================
 
 function loadCampaignFormData() {
-    // Load audiences into select
     const audienceSelect = document.getElementById('campaign-audience-select');
     audienceSelect.innerHTML = '<md-select-option></md-select-option>';
     fetch('/api/audiences').then(r => r.json()).then(files => {
@@ -511,7 +469,6 @@ function loadCampaignFormData() {
         });
     });
 
-    // Load accounts into checkbox list
     const accountsList = document.getElementById('campaign-accounts-list');
     accountsList.innerHTML = '';
     fetch('/api/accounts').then(r => r.json()).then(accounts => {
@@ -533,23 +490,14 @@ function startCampaign() {
     const name = document.getElementById('campaign-name').value;
     const audience_file = document.getElementById('campaign-audience-select').value;
     const message = document.getElementById('campaign-message').value;
-    
-    const selectedCheckboxes = document.querySelectorAll('#campaign-accounts-list md-checkbox[checked]');
-    const account_phones = Array.from(selectedCheckboxes).map(cb => cb.value);
+    const account_phones = Array.from(document.querySelectorAll('#campaign-accounts-list md-checkbox[checked]')).map(cb => cb.value);
 
-    if (!name || !audience_file || !message || account_phones.length === 0) {
-        return alert('Please fill all fields and select at least one account.');
-    }
+    if (!name || !audience_file || !message || !account_phones.length) return alert('All fields and at least one account are required.');
 
-    const campaignData = { name, audience_file, account_phones, message };
-    
-    apiPost('/api/campaigns/start', campaignData, (data) => {
-        if (data.status === 'ok') {
-            loadCampaigns(); // Refresh the list immediately
-            // Clear form
-            document.getElementById('campaign-name').value = '';
-            document.getElementById('campaign-message').value = '';
-        }
+    apiPost('/api/campaigns/start', { name, audience_file, account_phones, message }, () => {
+        loadCampaigns();
+        document.getElementById('campaign-name').value = '';
+        document.getElementById('campaign-message').value = '';
     });
 }
 
@@ -558,19 +506,15 @@ function loadCampaigns() {
         const tableBody = document.getElementById('campaigns-table-body');
         tableBody.innerHTML = '';
         if (!campaigns) return;
-
         campaigns.forEach(c => {
-            const row = document.createElement('tr');
-            const createdDate = new Date(c.created_at + 'Z').toLocaleString(); 
-            
+            const row = tableBody.insertRow();
             row.innerHTML = `
                 <td>${c.name}</td>
                 <td>${c.audience_file.replace('.json', '')}</td>
                 <td>${c.progress || `0/${c.total_users}`}</td>
                 <td><span class="status status-${(c.status || '').toLowerCase()}">${c.status}</span></td>
-                <td>${createdDate}</td>
+                <td>${new Date(c.created_at + 'Z').toLocaleString()}</td>
             `;
-
             const actionsCell = row.insertCell();
             const deleteButton = document.createElement('md-icon-button');
             deleteButton.innerHTML = `<span class="material-symbols-outlined">delete</span>`;
@@ -581,8 +525,7 @@ function loadCampaigns() {
 }
 
 function deleteCampaign(campaignId) {
-    if (!confirm('Are you sure you want to delete this campaign? This will remove it from the list.')) return;
-    apiPost('/api/campaigns/delete', { id: campaignId }, () => {
-        loadCampaigns();
-    }, false);
+    if (confirm('Delete this campaign?')) {
+        apiPost('/api/campaigns/delete', { id: campaignId }, () => loadCampaigns(), false);
+    }
 }

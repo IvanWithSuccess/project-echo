@@ -1,52 +1,19 @@
-/* Import Roboto font for Material Design */
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+/* =================================================================================
+   Global Styles & Layout
+   ================================================================================= */
 
-/* 
-   CSS Custom Properties for a Compact Material 3 Theme
-*/
 :root {
-    --md-sys-font-family: 'Roboto', sans-serif;
-
-    /* Adjusted Color Palette for better contrast */
-    --md-sys-color-primary: #6750A4;
-    --md-sys-color-on-primary: #FFFFFF;
-    --md-sys-color-primary-container: #EADDFF;
-    --md-sys-color-on-primary-container: #21005D;
-    --md-sys-color-secondary: #625B71;
-    --md-sys-color-on-secondary: #FFFFFF;
-    --md-sys-color-secondary-container: #E8DEF8;
-    --md-sys-color-on-secondary-container: #1D192B;
-    --md-sys-color-error: #B3261E;
-    --md-sys-color-background: #FFFBFE;
-    --md-sys-color-surface: #FFFBFE;
-    --md-sys-color-on-surface: #1C1B1F;
-    --md-sys-color-surface-variant: #E7E0EC;
-    --md-sys-color-on-surface-variant: #49454F;
-    --md-sys-color-outline: #CAC4D0; /* Lighter outline */
-    --md-sys-color-success: #2e7d32;
-
-    /* Compact Typography */
-    --md-sys-typescale-headline-large-size: 26px;
-    --md-sys-typescale-title-large-size: 20px;
-    --md-sys-typescale-body-large-size: 14px;
-    --md-sys-typescale-body-medium-size: 12px;
-    --md-sys-typescale-label-large-size: 14px;
-
-    /* Compact Component Variables */
-    --md-outlined-text-field-container-height: 48px;
-    --md-outlined-select-container-height: 48px;
-    --md-filled-button-container-height: 40px;
-    --md-outlined-button-container-height: 40px;
-    --md-text-button-container-height: 40px;
+    --md-sys-color-primary: #4a5568; /* Tailwind CSS gray-700 */
+    --md-sys-color-surface-container-highest: #ffffff;
+    --md-ref-typeface-brand: 'Roboto', sans-serif;
+    --md-ref-typeface-plain: 'Roboto', sans-serif;
 }
 
 body {
-    font-family: var(--md-sys-font-family);
-    background-color: var(--md-sys-color-background);
-    color: var(--md-sys-color-on-surface);
+    font-family: 'Roboto', sans-serif;
     margin: 0;
-    font-size: var(--md-sys-typescale-body-large-size);
-    line-height: 1.5;
+    background-color: #f7fafc; /* Tailwind CSS gray-100 */
+    color: #2d3748; /* Tailwind CSS gray-800 */
 }
 
 .app-layout {
@@ -55,162 +22,257 @@ body {
 }
 
 .sidebar {
-    width: 240px;
-    background-color: var(--md-sys-color-surface);
-    border-right: 1px solid var(--md-sys-color-outline);
-    padding: 12px;
+    width: 250px;
+    background-color: #ffffff;
+    border-right: 1px solid #e2e8f0; /* Tailwind CSS gray-200 */
+    padding: 1rem;
     display: flex;
     flex-direction: column;
-    gap: 16px;
 }
 
 .app-title {
-    font-size: var(--md-sys-typescale-title-large-size);
-    font-weight: 500;
-    padding: 8px 16px;
-}
-
-.sidebar nav {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    padding: 0 1rem 1rem 1rem;
+    color: #2d3748;
 }
 
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 8px 16px;
-    border-radius: 999px;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
     cursor: pointer;
-    transition: background-color 150ms ease-in-out;
-    font-size: var(--md-sys-typescale-label-large-size);
-    font-weight: 400;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #4a5568; /* Tailwind CSS gray-700 */
 }
 
-.nav-item:hover { background-color: var(--md-sys-color-surface-variant); }
+.nav-item:hover {
+    background-color: #edf2f7; /* Tailwind CSS gray-200 */
+}
+
 .nav-item.active {
-    background-color: var(--md-sys-color-secondary-container);
-    color: var(--md-sys-color-on-secondary-container);
-    font-weight: 500;
+    background-color: #e2e8f0; /* Tailwind CSS gray-300 */
+    color: #2d3748;
+    font-weight: bold;
+}
+
+.nav-item .material-symbols-outlined {
+    margin-right: 1rem;
 }
 
 .main-content {
     flex-grow: 1;
-    padding: 16px 24px;
+    padding: 2rem;
     overflow-y: auto;
 }
 
-.content-section { display: none; }
-.content-section.active { display: block; }
+.content-section {
+    display: none; /* Hidden by default, shown by JS */
+}
 
 .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 1.5rem;
 }
 
-.section-header h1 {
-    font-size: var(--md-sys-typescale-headline-large-size);
-    font-weight: 400;
-    margin: 0;
+.header-actions {
+    display: flex;
+    gap: 0.5rem; /* THIS IS THE FIX for the top-right buttons */
+    align-items: center;
 }
 
-.header-actions { display: flex; gap: 8px; }
+/* =================================================================================
+   Component & Element Styles
+   ================================================================================= */
 
-/* Table Styles */
 .data-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: var(--md-sys-typescale-body-large-size);
+    background-color: #ffffff;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.data-table th, .data-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
 }
 
 .data-table th {
-    text-align: left;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--md-sys-color-outline);
-    font-weight: 500;
-    color: var(--md-sys-color-on-surface-variant);
+    font-weight: bold;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #718096; /* Tailwind CSS gray-600 */
 }
 
 .data-table td {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--md-sys-color-outline);
-    vertical-align: middle;
+    color: #4a5568;
 }
 
-/* Form & Card Styles */
-.form-section { margin-bottom: 24px; }
-.form-section.card {
-    padding: 16px;
-    border: 1px solid var(--md-sys-color-outline);
-    border-radius: 12px;
-    background-color: #fdf8fd;
+.data-table td:last-child {
+    display: flex; /* THIS IS THE FIX for the squished action buttons */
+    gap: 0.25rem;  /* Adds space between Settings and Delete */
+    align-items: center;
 }
 
-.form-section h3, .form-section h4 { margin: 0 0 16px 0; font-weight: 500; }
+
+.card {
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    margin-bottom: 1.5rem;
+}
+
+.form-section {
+    margin-bottom: 1.5rem;
+}
+
+.form-section h3, .form-section h4 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
 
 .form-grid, .form-grid-3, .form-grid-responsive, .form-grid-campaign {
     display: grid;
-    gap: 16px;
-    align-items: flex-start;
+    gap: 1rem;
 }
 
 .form-grid { grid-template-columns: 1fr 2fr; }
-.form-grid-3 { grid-template-columns: 1fr 1fr auto; }
-.form-grid-responsive { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.form-grid-3 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); align-items: center; }
+.form-grid-responsive { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: end;}
 .form-grid-campaign { grid-template-columns: 1fr 1fr; }
-
-md-outlined-text-field, md-outlined-select {
-    width: 100%;
-}
-
-md-outlined-text-field[type="textarea"] {
-     height: 120px; /* Explicit height */
-    --md-outlined-text-field-container-height: 100%;
-}
 
 .form-actions {
     display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 16px;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    justify-content: flex-start;
 }
 
-/* Specific Component Adjustments */
-.avatar-section { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-#avatar-preview {
-    width: 100px; height: 100px; border-radius: 50%;
-    object-fit: cover; background-color: var(--md-sys-color-surface-variant);
+.avatar-section img {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-bottom: 1rem;
+    border: 2px solid #e2e8f0;
 }
 
-md-tabs { margin-bottom: 16px; }
-.tab-panel { display: none; padding-top: 16px; }
-.tab-panel.active { display: block; }
+.profile-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
 
-/* Dialog styles */
-.dialog-content { width: 400px; }
-#tags-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--md-sys-color-outline); }
-.tag-item { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); border-radius: 8px; font-size: var(--md-sys-typescale-body-medium-size);}
-.tag-item md-icon-button { --md-icon-button-icon-size: 16px; }
+.tab-panel {
+    display: none; /* Hidden by default */
+    padding-top: 1.5rem;
+}
 
-/* Status Indicators */
-.proxy-status.working { color: var(--md-sys-color-success); font-weight: 500; }
-.proxy-status.not-working { color: var(--md-sys-color-error); font-weight: 500; }
+.tab-panel.active {
+    display: block;
+}
 
-.status { padding: 2px 8px; border-radius: 12px; font-size: var(--md-sys-typescale-body-medium-size); font-weight: 500; }
-.status-running, .status-starting { background-color: #e3f2fd; color: #1565c0; }
-.status-completed { background-color: #e8f5e9; color: var(--md-sys-color-success); }
-.status-failed { background-color: #ffebf1; color: var(--md-sys-color-error); }
+.tag-chip, .tag-chip-interactive {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    background-color: #e2e8f0;
+    color: #4a5568;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
 
-/* List styles */
-.list-container { display: flex; flex-direction: column; gap: 8px; }
-.list-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid var(--md-sys-color-outline); border-radius: 8px; }
-.item-actions { display: flex; gap: 4px; }
+.tag-chip-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
 
-/* Checkbox list */
-.checkbox-list { display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; border: 1px solid var(--md-sys-color-outline); border-radius: 8px; padding: 8px; }
-.checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px; border-radius: 4px;}
-.checkbox-label:hover { background-color: var(--md-sys-color-surface-variant); }
-md-checkbox { --md-checkbox-state-layer-size: 32px; --md-checkbox-container-size: 20px; }
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.tag-chip-interactive .material-symbols-outlined {
+    font-size: 1rem;
+    margin-left: 0.5rem;
+    cursor: pointer;
+}
+
+.list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background-color: #ffffff;
+    border-radius: 0.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+.list-item span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.checkbox-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 0.5rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.checkbox-label:hover { 
+    background-color: #edf2f7;
+}
+
+.status {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: bold;
+    font-size: 0.8rem;
+    text-transform: capitalize;
+}
+
+.status-running {
+    background-color: #cce5ff;
+    color: #004085;
+}
+
+.status-completed {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-starting,
+.status-finished-with-errors {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+
