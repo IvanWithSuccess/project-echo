@@ -1,6 +1,5 @@
 
 from kivy.lang import Builder
-from kivy.uix.boxlayout import BoxLayout
 from kivymd.app import MDApp
 from kivymd.uix.tab import MDTabsBase
 from kivymd.uix.floatlayout import MDFloatLayout
@@ -8,26 +7,8 @@ from kivymd.uix.floatlayout import MDFloatLayout
 # --- Import the custom screen ---
 from project_echo.screens.accounts_screen import AccountsPanel
 
-# --- Load the KV files ---
-# The main layout for the app
-Builder.load_string("""
-MDBoxLayout:
-    orientation: "vertical"
-
-    MDTopAppBar:
-        title: "Project Echo"
-
-    MDTabs:
-        id: tabs
-        on_tab_switch: app.on_tab_switch(*args)
-
-<Tab>:
-    # This is the base class for the content of each tab.
-    # We'll add content to it dynamically.
-    pass
-""")
-
-# The specific layout for the Accounts screen
+# --- Load the KV file for the Accounts screen ---
+# This will be automatically associated with the AccountsPanel class by Kivy
 Builder.load_file("project_echo/screens/accounts_screen.kv")
 
 
@@ -36,7 +17,7 @@ Builder.load_file("project_echo/screens/accounts_screen.kv")
 # =========================================================================
 
 class Tab(MDFloatLayout, MDTabsBase):
-    """Class for a tab in the MDTabs widget."""
+    """Base class for a tab in the MDTabs widget."""
     pass
 
 # =========================================================================
@@ -44,11 +25,10 @@ class Tab(MDFloatLayout, MDTabsBase):
 # =========================================================================
 
 class ProjectEchoApp(MDApp):
-    def build(self):
-        self.theme_cls.primary_palette = "Blue"
-        self.theme_cls.theme_style = "Light"
-        # The root widget is now defined in the loaded KV string
-        return Builder.load_string("""
+    """The main application class."""
+
+    # Define the main KV string for the application's root widget
+    KV = """
 MDBoxLayout:
     orientation: "vertical"
 
@@ -58,10 +38,16 @@ MDBoxLayout:
     MDTabs:
         id: tabs
         on_tab_switch: app.on_tab_switch(*args)
-""")
+"""
+
+    def build(self):
+        """Initializes the application and returns the root widget."""
+        self.theme_cls.primary_palette = "Blue"
+        self.theme_cls.theme_style = "Light"
+        return Builder.load_string(self.KV)
 
     def on_start(self):
-        """Populate the tabs with their respective content."""
+        """Populate the tabs with their respective content after the app starts."""
         tabs_data = {
             "Accounts": "account-group",
             "Dashboard": "view-dashboard",
