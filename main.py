@@ -6,8 +6,9 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.button import MDTextButton
 from kivymd.uix.label import MDLabel
 from functools import partial
-# --- FIX: Import NoTransition to disable screen switching animation ---
 from kivy.uix.screenmanager import NoTransition
+# --- FIX: Import StringProperty to define custom properties ---
+from kivy.properties import StringProperty
 
 # Import our custom screen content
 from project_echo.screens.accounts_screen import AccountsPanel
@@ -15,8 +16,9 @@ from project_echo.screens.accounts_screen import AccountsPanel
 # Load KV files
 Builder.load_file("project_echo/screens/accounts_screen.kv")
 
+# --- FIX: Explicitly define the 'icon' property for our custom button ---
 class NavButton(MDTextButton):
-    pass
+    icon = StringProperty("")
 
 # =========================================================================
 # >> MAIN APP CLASS
@@ -35,7 +37,6 @@ class ProjectEchoApp(MDApp):
 
     def on_start(self):
         """Create and populate screens and navigation buttons."""
-        # --- FIX: Apply NoTransition to the screen manager ---
         self.root.ids.screen_manager.transition = NoTransition()
 
         screens_data = {
@@ -55,6 +56,7 @@ class ProjectEchoApp(MDApp):
                 ))
             self.root.ids.screen_manager.add_widget(screen)
 
+            # This now works because NavButton has an 'icon' property
             nav_button = NavButton(
                 text=screen_info['title'],
                 icon=screen_info['icon'],
