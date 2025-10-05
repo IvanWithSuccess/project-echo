@@ -5,7 +5,8 @@ from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from functools import partial
-from kivy.uix.screenmanager import NoTransition
+# --- FIX: Import a different, more suitable transition ---
+from kivy.uix.screenmanager import WipeTransition
 from kivy.properties import StringProperty
 
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -37,8 +38,8 @@ class ProjectEchoApp(MDApp):
         # Load the UI from the KV file
         root = Builder.load_file('main.kv')
         
-        # FIX: Disable transition animation immediately after the widget is created.
-        root.ids.screen_manager.transition = NoTransition()
+        # FIX: Set the transition to WipeTransition for a fast, non-sliding effect.
+        root.ids.screen_manager.transition = WipeTransition()
         
         return root
 
