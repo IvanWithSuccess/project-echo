@@ -1,8 +1,38 @@
+# ==========================================================================
+# >> MAIN LAYOUT KV
+# ==========================================================================
+# This defines the main structure with a navigation rail on the left
+# and a screen manager on the right.
+# ==========================================================================
+
 MDBoxLayout:
-    orientation: "vertical"
+    orientation: 'horizontal'
 
-    MDTopAppBar:
-        title: "Project Echo"
+    # --- Custom Navigation Panel (Left Side) ---
+    MDBoxLayout:
+        orientation: 'vertical'
+        adaptive_width: True
+        padding: dp(8)
+        spacing: dp(16)
+        md_bg_color: app.theme_cls.bg_light
 
-    MDTabs:
-        id: tabs
+        # Title/Logo at the top of the navigation panel
+        MDLabel:
+            text: "Project Echo"
+            font_style: "H6"
+            adaptive_size: True
+            padding_y: dp(16)
+            halign: "center"
+
+        # List to hold the navigation buttons
+        MDList:
+            id: nav_list
+            md_bg_color: 0, 0, 0, 0 # Transparent background
+
+    # --- Vertical Separator Line ---
+    MDSeparator:
+        orientation: 'vertical'
+
+    # --- Content Area (Right Side) ---
+    MDScreenManager:
+        id: screen_manager

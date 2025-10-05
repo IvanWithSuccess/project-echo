@@ -1,69 +1,69 @@
 
 from kivy.lang import Builder
-# --- Import Kivy's Window module to control the window size ---
 from kivy.core.window import Window
 from kivymd.app import MDApp
-from kivymd.uix.tab import MDTabsBase
-from kivy.uix.floatlayout import FloatLayout
+from kivymd.uix.screen import MDScreen
+# --- Correctly import all necessary list components ---
+from kivymd.uix.list import OneLineIconListItem, IconLeftWidget
 from kivymd.uix.label import MDLabel
+from functools import partial
 
 # Import our custom screen content
 from project_echo.screens.accounts_screen import AccountsPanel
 
-# Load the KV file for the accounts screen widget
+# Load the KV files
 Builder.load_file("project_echo/screens/accounts_screen.kv")
-
-
-# =========================================================================
-# >> TAB CONTENT CLASS (KivyMD 1.2.0 Style)
-# =========================================================================
-
-class Tab(FloatLayout, MDTabsBase):
-    """ Class for the content of a single tab. """
-    pass
-
 
 # =========================================================================
 # >> MAIN APP CLASS
-# =========================================================================
+# ==========================================================================
 
 class ProjectEchoApp(MDApp):
-    """The main application class."""
+    """The main application class with side navigation."""
 
     def build(self):
         """Initializes the application and returns the root widget."""
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
-        
-        # --- Maximize the window on startup ---
         Window.maximize()
-        
         return Builder.load_file('main.kv')
 
     def on_start(self):
-        """Populate the tabs with their respective content after the app starts."""
-        # --- Reordered tabs as requested: Dashboard -> Accounts -> Campaigns ---
-        tabs_data = {
-            "Dashboard": "view-dashboard",
-            "Accounts": "account-group",
-            "Campaigns": "bullhorn",
+        """Create and populate screens and navigation buttons."""
+        screens_data = {
+            "dashboard": {"icon": "view-dashboard", "title": "Dashboard"},
+            "accounts": {"icon": "account-group", "title": "Accounts"},
+            "campaigns": {"icon": "bullhorn", "title": "Campaigns"},
         }
 
-        for title, icon in tabs_data.items():
-            tab_content = Tab(title=title, icon=icon)
-
-            if title == "Accounts":
-                tab_content.add_widget(AccountsPanel())
+        for screen_name, screen_info in screens_data.items():
+            # --- 1. Create the screen ---
+            screen = MDScreen(name=screen_name)
+            if screen_name == "accounts":
+                screen.add_widget(AccountsPanel())
             else:
-                # --- Use a standard font style for content labels ---
-                tab_content.add_widget(MDLabel(
-                    text=f"{title} content will be here",
-                    halign="center",
-                    font_style="Body1" 
+                screen.add_widget(MDLabel(
+                    text=f"{screen_info['title']} content will be here",
+                    halign="center"
                 ))
+            self.root.ids.screen_manager.add_widget(screen)
 
-            self.root.ids.tabs.add_widget(tab_content)
+            # --- 2. Create the navigation button (Corrected Method) ---
+            nav_item = OneLineIconListItem(
+                text=screen_info['title'],
+                on_release=partial(self.switch_screen, screen_name)
+            )
+            # Create an IconLeftWidget and add it to the list item
+            icon = IconLeftWidget(icon=screen_info['icon'])
+            nav_item.add_widget(icon)
+            self.root.ids.nav_list.add_widget(nav_item)
 
+        # Start on the dashboard screen
+        self.root.ids.screen_manager.current = 'dashboard'
+
+    def switch_screen(self, screen_name, *args):
+        """Callback function to switch the currently displayed screen."""
+        self.root.ids.screen_manager.current = screen_name
 
 # ==========================================================================
 # >> MAIN EXECUTION
