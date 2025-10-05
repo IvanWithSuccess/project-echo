@@ -3,26 +3,32 @@
 # >> CUSTOM WIDGET DEFINITIONS
 # =========================================================================
 
+# FIX: Redefined NavButton as a layout that behaves like a button.
+# It is no longer based on a pre-existing button class.
 <NavButton>:
-    theme_width: "Custom"
-    height: dp(72)
-    width: dp(80)
+    orientation: 'vertical'
+    size_hint: None, None
+    size: dp(80), dp(72)
+    padding: [dp(8), dp(12), dp(8), dp(8)]
+    spacing: dp(4)
+
+    # The container for the icon, ensuring it's centered.
     MDBoxLayout:
-        orientation: 'vertical'
-        adaptive_size: True
-        pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-        spacing: dp(4)
+        adaptive_height: True
+        padding: [0, 0, 0, dp(4)]
         MDIcon:
             id: icon
             icon: root.icon
             halign: 'center'
-            valign: 'middle'
             font_size: dp(24)
-        MDLabel:
-            text: root.text
-            halign: 'center'
-            font_style: "Caption"
-            adaptive_height: True
+
+    MDLabel:
+        text: root.text
+        halign: 'center'
+        # FIX: Explicitly set a much smaller font size.
+        font_style: "Caption"
+        font_size: "10sp"
+        adaptive_height: True
 
 # =========================================================================
 # >> MAIN LAYOUT KV
@@ -59,5 +65,3 @@ MDBoxLayout:
 
     MDScreenManager:
         id: screen_manager
-        # FIX: Removed invalid 'transition: "none"' property.
-        # This will be set in the main.py file correctly.

@@ -3,12 +3,15 @@ from kivy.lang import Builder
 from kivy.core.window import Window
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
-from kivymd.uix.button import MDTextButton
 from kivymd.uix.label import MDLabel
 from functools import partial
 from kivy.uix.screenmanager import NoTransition
-# --- FIX: Import StringProperty to define custom properties ---
 from kivy.properties import StringProperty
+
+# --- FIX: Import the correct base classes for a custom clickable layout ---
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivy.uix.behaviors import ButtonBehavior
+from kivymd.uix.behaviors import CircularRippleBehavior
 
 # Import our custom screen content
 from project_echo.screens.accounts_screen import AccountsPanel
@@ -16,8 +19,10 @@ from project_echo.screens.accounts_screen import AccountsPanel
 # Load KV files
 Builder.load_file("project_echo/screens/accounts_screen.kv")
 
-# --- FIX: Explicitly define the 'icon' property for our custom button ---
-class NavButton(MDTextButton):
+# --- FIX: Define NavButton as a clickable layout with ripple effect ---
+class NavButton(MDBoxLayout, ButtonBehavior, CircularRippleBehavior):
+    # Add properties for both text and icon so they can be set from Python
+    text = StringProperty("")
     icon = StringProperty("")
 
 # =========================================================================
@@ -56,7 +61,7 @@ class ProjectEchoApp(MDApp):
                 ))
             self.root.ids.screen_manager.add_widget(screen)
 
-            # This now works because NavButton has an 'icon' property
+            # This now correctly creates an instance of our custom layout button
             nav_button = NavButton(
                 text=screen_info['title'],
                 icon=screen_info['icon'],
