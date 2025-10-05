@@ -193,7 +193,32 @@
             <!-- Ad Cabinet Section -->
             <div id="campaigns" class="content-section">
                 <div class="section-header"><h1>Ad Cabinet</h1></div>
-                <!-- Coming soon -->
+                <div class="form-section card">
+                    <h3>Create New Campaign</h3>
+                    <div class="form-grid-campaign">
+                        <md-outlined-text-field id="campaign-name" label="Campaign Name"></md-outlined-text-field>
+                        <md-outlined-select id="campaign-audience-select" label="Select Audience"></md-outlined-select>
+                    </div>
+                    <div class="form-section">
+                        <h4>Select accounts for sending</h4>
+                        <div id="campaign-accounts-list" class="checkbox-list"></div>
+                    </div>
+                    <div class="form-section">
+                        <h4>Message</h4>
+                        <md-outlined-text-field id="campaign-message" type="textarea" rows="5" label="Your message text here"></md-outlined-text-field>
+                    </div>
+                    <div class="form-actions">
+                        <md-filled-button onclick="startCampaign()">
+                            Start Campaign
+                            <span slot="icon" class="material-symbols-outlined">rocket_launch</span>
+                        </md-filled-button>
+                    </div>
+                </div>
+                <h3>Campaigns</h3>
+                <table class="data-table">
+                    <thead><tr><th>Name</th><th>Audience</th><th>Progress</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+                    <tbody id="campaigns-table-body"></tbody>
+                </table>
             </div>
 
             <!-- Proxies Section -->
