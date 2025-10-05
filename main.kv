@@ -1,38 +1,37 @@
 
+#:import WipeTransition kivy.uix.screenmanager.WipeTransition
+
 # =========================================================================
 # >> CUSTOM WIDGET DEFINITIONS
 # =========================================================================
 
 <NavButton>:
-    # This is a clickable layout, defined as a class in main.py
     orientation: 'vertical'
     size_hint: None, None
     size: dp(80), dp(72)
     padding: [0, dp(12), 0, dp(8)]
     spacing: dp(4)
 
-    # This canvas makes the entire widget area sensitive to clicks.
     canvas.before:
         Color:
-            rgba: 0, 0, 0, 0 # Transparent background
+            rgba: 0, 0, 0, 0
         Rectangle:
             pos: self.pos
             size: self.size
 
-    # FIX: Use pos_hint for a more robust centering method.
     MDIcon:
         id: icon
         icon: root.icon
         pos_hint: {'center_x': 0.5}
         font_size: dp(24)
-        adaptive_size: True # Shrink to content size before centering
+        adaptive_size: True
 
     MDLabel:
         text: root.text
         pos_hint: {'center_x': 0.5}
         font_style: "Caption"
         font_size: "10sp"
-        adaptive_size: True # Shrink to content size before centering
+        adaptive_size: True
 
 # =========================================================================
 # >> MAIN LAYOUT KV
@@ -69,3 +68,5 @@ MDBoxLayout:
 
     MDScreenManager:
         id: screen_manager
+        # FIX: Define the transition directly in the KV file for robustness.
+        transition: WipeTransition()

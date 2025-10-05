@@ -5,8 +5,6 @@ from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from functools import partial
-# --- FIX: Import a different, more suitable transition ---
-from kivy.uix.screenmanager import WipeTransition
 from kivy.properties import StringProperty
 
 from kivymd.uix.boxlayout import MDBoxLayout
@@ -34,14 +32,9 @@ class ProjectEchoApp(MDApp):
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Gray"
         Window.maximize()
-
-        # Load the UI from the KV file
-        root = Builder.load_file('main.kv')
-        
-        # FIX: Set the transition to WipeTransition for a fast, non-sliding effect.
-        root.ids.screen_manager.transition = WipeTransition()
-        
-        return root
+        # FIX: Removed all Python-side transition logic.
+        # The transition is now handled entirely and more reliably in main.kv.
+        return Builder.load_file('main.kv')
 
     def on_start(self):
         """Create and populate screens and navigation buttons."""
