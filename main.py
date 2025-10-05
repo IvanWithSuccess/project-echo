@@ -1,5 +1,7 @@
 
 from kivy.lang import Builder
+# --- Import Kivy's Window module to control the window size ---
+from kivy.core.window import Window
 from kivymd.app import MDApp
 from kivymd.uix.tab import MDTabsBase
 from kivy.uix.floatlayout import FloatLayout
@@ -17,8 +19,7 @@ Builder.load_file("project_echo/screens/accounts_screen.kv")
 # =========================================================================
 
 class Tab(FloatLayout, MDTabsBase):
-    """ Class for the content of a single tab. KivyMD 1.2.0 uses the
-        MDTabsBase mixin to link this content to a tab button. """
+    """ Class for the content of a single tab. """
     pass
 
 
@@ -30,34 +31,37 @@ class ProjectEchoApp(MDApp):
     """The main application class."""
 
     def build(self):
-        """Initializes the application and returns the root widget.
-           The root widget is defined in 'main.kv'."""
+        """Initializes the application and returns the root widget."""
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
+        
+        # --- Maximize the window on startup ---
+        Window.maximize()
+        
         return Builder.load_file('main.kv')
 
     def on_start(self):
         """Populate the tabs with their respective content after the app starts."""
+        # --- Reordered tabs as requested: Dashboard -> Accounts -> Campaigns ---
         tabs_data = {
-            "Accounts": "account-group",
             "Dashboard": "view-dashboard",
+            "Accounts": "account-group",
             "Campaigns": "bullhorn",
         }
 
         for title, icon in tabs_data.items():
-            # Create an instance of our Tab content class
             tab_content = Tab(title=title, icon=icon)
 
-            # Add the appropriate content widget to the tab
             if title == "Accounts":
                 tab_content.add_widget(AccountsPanel())
             else:
+                # --- Use a standard font style for content labels ---
                 tab_content.add_widget(MDLabel(
                     text=f"{title} content will be here",
-                    halign="center"
+                    halign="center",
+                    font_style="Body1" 
                 ))
 
-            # Add the tab content to the main MDTabs widget
             self.root.ids.tabs.add_widget(tab_content)
 
 

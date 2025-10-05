@@ -11,12 +11,12 @@
 
             MDLabel:
                 text: "Accounts"
-                font_style: "H6"
+                # FIX: Reduced font size from H6 to Subtitle1 as requested
+                font_style: "Subtitle1"
                 adaptive_height: True
 
             MDIconButton:
                 icon: 'plus'
-                # FIX: Removed `style="standard"` which is not available in KivyMD 1.2.0
                 on_release: root.add_account()
 
         # --- Scrollable List of Accounts ---
