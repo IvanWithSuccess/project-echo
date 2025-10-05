@@ -1,47 +1,44 @@
-
-// =================================================================================
-// App State & Initialization
-// =================================================================================
-
-let currentAccount = null; 
-let scrapedAudience = []; 
+let currentAccount = null;
+let scrapedAudience = [];
 let campaignIntervalId = null;
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Set initial section and setup event listeners
+// A single, reliable function to start the app once components are ready.
+function initializeApp() {
+    console.log("All components ready. Initializing application.");
     switchSection('dashboard');
     setupTabListeners();
+}
+
+// The core of the fix: Wait for a key component to be defined before running any code.
+customElements.whenDefined('md-filled-button').then(() => {
+    if (document.readyState === 'loading') {
+        // The DOM isn't ready yet, so wait for it.
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    } else {
+        // The DOM is already ready, run the app now.
+        initializeApp();
+    }
 });
 
 function setupTabListeners() {
     const accountTabs = document.querySelector('#account-settings md-tabs');
     if (accountTabs) {
-        // This is the critical fix. The event is `change`, not anything else.
         accountTabs.addEventListener('change', () => {
             const activeTab = accountTabs.querySelector('md-primary-tab[active]');
             if (activeTab) {
                 const panelId = activeTab.id.replace('tab-', '') + '-panel';
                 document.querySelectorAll('#account-settings .tab-panel').forEach(p => p.classList.remove('active'));
                 const panel = document.getElementById(panelId);
-                if (panel) {
-                    panel.classList.add('active');
-                }
+                if (panel) panel.classList.add('active');
             }
         });
     }
 }
 
-
-// =================================================================================
-// Core UI & API Functions
-// =================================================================================
-
 function switchSection(sectionId) {
-    // Hide all sections, show the target one
     document.querySelectorAll('.content-section').forEach(s => s.style.display = 'none');
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
 
-    // Stop polling campaigns if we navigate away
     if (campaignIntervalId) {
         clearInterval(campaignIntervalId);
         campaignIntervalId = null;
@@ -53,13 +50,15 @@ function switchSection(sectionId) {
     const navItem = document.getElementById(`nav-${sectionId.split('-')[0]}`);
     if (navItem) navItem.classList.add('active');
 
-    // Load data for the activated section
     switch (sectionId) {
         case 'accounts': loadAccounts(); break;
-        case 'account-settings': /* Loaded by showAccountSettingsPage */ break;
         case 'proxies': loadProxies(); break;
         case 'audiences': loadAccountsForScraper(); loadAndDisplayAudiences(); break;
-        case 'campaigns': loadCampaignFormData(); loadCampaigns(); campaignIntervalId = setInterval(loadCampaigns, 5000); break;
+        case 'campaigns': 
+            loadCampaignFormData(); 
+            loadCampaigns(); 
+            campaignIntervalId = setInterval(loadCampaigns, 5000); 
+            break;
     }
 }
 
@@ -71,34 +70,22 @@ async function apiPost(endpoint, body, showAlerts = true) {
             body: JSON.stringify(body)
         });
         const data = await response.json();
-        if (!response.ok) {
-            throw new Error(data.message || `HTTP error! Status: ${response.status}`);
-        }
-        if (showAlerts && data.message) {
-            alert(data.message);
-        }
-        return data; // Return data for further processing
+        if (!response.ok) throw new Error(data.message || `HTTP error! Status: ${response.status}`);
+        if (showAlerts && data.message) alert(data.message);
+        return data;
     } catch (error) {
         console.error(`API Error at ${endpoint}:`, error);
-        if (showAlerts) {
-            alert(error.message);
-        }
-        throw error; // Re-throw to be caught by calling function if needed
+        if (showAlerts) alert(error.message);
+        throw error;
     }
 }
-
-
-// =================================================================================
-// Accounts Center
-// =================================================================================
 
 function loadAccounts() {
     fetch('/api/accounts').then(r => r.json()).then(accounts => {
         const tableBody = document.getElementById('accounts-table-body');
-        tableBody.innerHTML = ''; // Clear existing rows
+        tableBody.innerHTML = '';
         accounts.forEach(acc => {
             const row = tableBody.insertRow();
-            
             row.insertCell().textContent = acc.phone;
             row.insertCell().textContent = acc.username || 'N/A';
             
@@ -164,24 +151,17 @@ function showMainAccountsPage() {
     switchSection('accounts');
 }
 
-
-// =================================================================================
-// Account Settings Page
-// =================================================================================
-
 function showAccountSettingsPage(account) {
     currentAccount = account;
     switchSection('account-settings');
 
     document.getElementById('settings-account-display-phone').textContent = account.phone;
     
-    // Reset tabs and panels to a known state
     document.getElementById('main-settings-panel').classList.add('active');
     document.getElementById('proxy-settings-panel').classList.remove('active');
     const tabs = document.querySelector('#account-settings md-tabs');
     if (tabs) tabs.activeTabIndex = 0;
 
-    // Populate Main Settings
     const settings = account.settings || {};
     const profile = settings.profile || {};
     document.getElementById('account-first-name').value = profile.first_name || '';
@@ -203,13 +183,11 @@ function showAccountSettingsPage(account) {
     document.getElementById('ua-chrome-version').value = ua.chrome || '108.0.5359.215';
     document.getElementById('account-user-agent-input').value = ua.full_string || '';
 
-    // Populate Proxy Settings
     loadProxiesForAccount(settings.proxy_id);
 }
 
 function saveAccountSettings() {
     if (!currentAccount) return;
-
     const settings = {
         profile: {
             first_name: document.getElementById('account-first-name').value,
@@ -224,7 +202,6 @@ function saveAccountSettings() {
         avatar_path: document.getElementById('account-avatar-path').value,
         proxy_id: document.getElementById('account-proxy-select').value
     };
-
     apiPost('/api/accounts/settings', { phone: currentAccount.phone, settings });
 }
 
@@ -266,12 +243,6 @@ function generateUserAgent() {
     document.getElementById('account-user-agent-input').value = `Mozilla/5.0 (${os === 'macOS' ? 'Macintosh; Intel Mac OS X 10_15_7' : 'Windows NT 10.0; Win64; x64'}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chrome} Safari/537.36`;
 }
 
-// ... (Keep Tag, Proxy, Audience, and Campaign functions as they are, they are correct) ...
-
-// =================================================================================
-// Tags Management (Dialog)
-// =================================================================================
-
 function openTagsDialog() {
     loadTags();
     document.getElementById('tags-dialog').show();
@@ -303,11 +274,6 @@ function deleteTag(name) {
         apiPost('/api/tags/delete', { name }, () => loadTags());
     }
 }
-
-
-// =================================================================================
-// Proxies Section
-// =================================================================================
 
 function loadProxies() {
     fetch('/api/proxies').then(r => r.json()).then(proxies => {
@@ -379,11 +345,6 @@ function loadProxiesForAccount(selectedProxyId) {
     });
 }
 
-
-// =================================================================================
-// Audience CRM
-// =================================================================================
-
 function loadAccountsForScraper() {
     const select = document.getElementById('scraper-account-select');
     select.innerHTML = '<md-select-option></md-select-option>';
@@ -451,11 +412,6 @@ function deleteAudienceFromList(filename) {
         apiPost('/api/audiences/delete', { filename }, () => loadAndDisplayAudiences());
     }
 }
-
-
-// =================================================================================
-// Ad Cabinet
-// =================================================================================
 
 function loadCampaignFormData() {
     const audienceSelect = document.getElementById('campaign-audience-select');

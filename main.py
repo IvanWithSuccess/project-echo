@@ -11,5 +11,6 @@ if __name__ == "__main__":
     print("--- Press CTRL+C here to stop the server. ---\n")
 
     # Run the Flask web server.
+    # debug=True is CRITICAL for development as it disables caching.
     # use_reloader=False is critical for the background campaign threads to work correctly.
-    app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)
+    app.run(host="127.0.0.1", port=5000, debug=True, use_reloader=False)
