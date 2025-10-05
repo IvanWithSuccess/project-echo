@@ -44,14 +44,16 @@ class AccountsPanel(MDBoxLayout):
                 {
                     "viewclass": "OneLineIconListItem",
                     "text": "Add manually",
-                    "height": dp(56),
+                    # FIX: Reduced item height for a more compact menu
+                    "height": dp(48),
                     "on_release": self.show_add_account_dialog,
                     "left_icon": "pencil"
                 },
                 {
                     "viewclass": "OneLineIconListItem",
                     "text": "Import from API",
-                    "height": dp(56),
+                    # FIX: Reduced item height for a more compact menu
+                    "height": dp(48),
                     "on_release": self.show_api_import_dialog,
                     "left_icon": "cloud-upload-outline"
                 }
@@ -59,9 +61,9 @@ class AccountsPanel(MDBoxLayout):
             self.menu = MDDropdownMenu(
                 caller=self.ids.add_button,
                 items=menu_items,
-                # FIX: Set position to 'top' and adjust width
                 position="top",
-                width_mult=3,
+                # FIX: Reduced width for a more compact menu
+                width_mult=3.5,
             )
         self.menu.open()
 

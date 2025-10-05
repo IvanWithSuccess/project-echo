@@ -1,8 +1,6 @@
 <AccountsPanel>:
-    # FIX: Use MDRelativeLayout as the root to allow overlaying widgets correctly
     MDRelativeLayout:
 
-        # Main content area
         MDBoxLayout:
             orientation: 'vertical'
             padding: dp(24)
@@ -19,11 +17,13 @@
                     id: account_list
                     padding: 0
 
-        # FIX: Replaced SpeedDial with a standard, reliably positioned FAB
         MDFloatingActionButton:
             id: add_button
             icon: "plus"
+            # FIX: Set a smaller, custom size for the button
+            size_hint: (None, None)
+            size: (dp(40), dp(40))
             on_release: root.open_menu()
-            # Position the button in the bottom-right corner with a margin
-            x: self.parent.width - self.width - dp(24)
-            y: dp(24)
+            # Adjust position to be based on the smaller size
+            x: self.parent.width - self.width - dp(16)
+            y: dp(16)
