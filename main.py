@@ -1,10 +1,10 @@
 
 from kivy.lang import Builder
 from kivy.core.window import Window
-from kivy.utils import get_color_from_hex
+# --- FIX: Removed unused get_color_from_hex import ---
+# from kivy.utils import get_color_from_hex
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
-# --- FIX: Import the correct button class for KivyMD 1.2.0 ---
 from kivymd.uix.button import MDTextButton
 from kivymd.uix.label import MDLabel
 from functools import partial
@@ -15,7 +15,6 @@ from project_echo.screens.accounts_screen import AccountsPanel
 # Load KV files
 Builder.load_file("project_echo/screens/accounts_screen.kv")
 
-# --- FIX: Inherit from MDTextButton instead of the non-existent MDButton ---
 class NavButton(MDTextButton):
     pass
 
@@ -28,12 +27,9 @@ class ProjectEchoApp(MDApp):
 
     def build(self):
         """Initializes the application and returns the root widget."""
-        self.theme_cls.theme_style = "Dark"
-        self.theme_cls.primary_palette = "Custom"
-        self.theme_cls.primary_hue = "500"
-        self.theme_cls.colors["Custom"] = {
-            "500": get_color_from_hex("#a58d78"),
-        }
+        # --- FIX: Use a standard color palette compatible with KivyMD 1.2.0 ---
+        self.theme_cls.theme_style = "Dark"  # As requested: black/dark background
+        self.theme_cls.primary_palette = "Gray" # As requested: gray accents
 
         Window.maximize()
         return Builder.load_file('main.kv')
