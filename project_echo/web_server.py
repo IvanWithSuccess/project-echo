@@ -5,6 +5,11 @@ import os
 # --- Basic Flask App Setup ---
 app = Flask(__name__, template_folder='templates', static_folder='static')
 
+# --- CRITICAL CACHE FIX ---
+# This configuration tells the browser to always check for a new version of static files
+# and not to use a cached version. Setting max_age to 0 is the key.
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
 # --- Logging Configuration ---
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -37,4 +42,3 @@ def setup_directories():
     os.makedirs(os.path.join(base_dir, 'audiences'), exist_ok=True)
     os.makedirs(os.path.join(base_dir, 'uploads'), exist_ok=True)
     logging.info("Directory setup complete.")
-
