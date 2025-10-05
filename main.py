@@ -8,11 +8,8 @@ from functools import partial
 from kivy.uix.screenmanager import NoTransition
 from kivy.properties import StringProperty
 
-# --- FIX: Import the correct base classes for a custom clickable layout ---
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.behaviors import ButtonBehavior
-# --- FIX: Removed CircularRippleBehavior as it was conflicting with ButtonBehavior ---
-# from kivymd.uix.behaviors import CircularRippleBehavior
 
 # Import our custom screen content
 from project_echo.screens.accounts_screen import AccountsPanel
@@ -20,10 +17,7 @@ from project_echo.screens.accounts_screen import AccountsPanel
 # Load KV files
 Builder.load_file("project_echo/screens/accounts_screen.kv")
 
-# --- FIX: Defined NavButton as a clickable layout without the ripple effect ---
-# This ensures that the on_release event from ButtonBehavior is triggered correctly.
 class NavButton(ButtonBehavior, MDBoxLayout):
-    # Add properties for both text and icon so they can be set from Python
     text = StringProperty("")
     icon = StringProperty("")
 
@@ -38,14 +32,18 @@ class ProjectEchoApp(MDApp):
         """Initializes the application and returns the root widget."""
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Gray"
-
         Window.maximize()
-        return Builder.load_file('main.kv')
+
+        # Load the UI from the KV file
+        root = Builder.load_file('main.kv')
+        
+        # FIX: Disable transition animation immediately after the widget is created.
+        root.ids.screen_manager.transition = NoTransition()
+        
+        return root
 
     def on_start(self):
         """Create and populate screens and navigation buttons."""
-        self.root.ids.screen_manager.transition = NoTransition()
-
         screens_data = {
             "dashboard": {"icon": "view-dashboard", "title": "Dashboard"},
             "accounts": {"icon": "account-group", "title": "Accounts"},
@@ -63,7 +61,6 @@ class ProjectEchoApp(MDApp):
                 ))
             self.root.ids.screen_manager.add_widget(screen)
 
-            # This now correctly creates an instance of our custom layout button
             nav_button = NavButton(
                 text=screen_info['title'],
                 icon=screen_info['icon'],
