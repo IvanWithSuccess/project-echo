@@ -4,8 +4,8 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton, MDRaisedButton
 from kivymd.uix.textfield import MDTextField
-from kivymd.uix.list import ThreeLineAvatarIconListItem, IconLeftWidget
-# FIX: Import MDDropdownMenu
+# FIX: Added missing import for OneLineIconListItem
+from kivymd.uix.list import ThreeLineAvatarIconListItem, IconLeftWidget, OneLineIconListItem
 from kivymd.uix.menu import MDDropdownMenu
 
 Builder.load_string("""
@@ -36,45 +36,39 @@ class AccountsPanel(MDBoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.dialog = None
+        # Menu is initialized to None
         self.menu = None
 
-    # FIX: Create the dropdown menu after the layout is ready
-    def on_kv_post(self, base_widget):
-        """Called after the kv file is loaded. Creates the dropdown menu."""
-        menu_items = [
-            {
-                "viewclass": "OneLineIconListItem",
-                "text": "Add manually",
-                "height": dp(56),
-                "on_release": self.show_add_account_dialog,
-                "IconLeftWidget": {
-                    "icon": "pencil"
-                }
-            },
-            {
-                "viewclass": "OneLineIconListItem",
-                "text": "Import from API",
-                "height": dp(56),
-                "on_release": lambda: print("API Import placeholder"),
-                "IconLeftWidget": {
-                    "icon": "cloud-upload-outline"
-                }
-            }
-        ]
-        self.menu = MDDropdownMenu(
-            caller=self.ids.add_button,
-            items=menu_items,
-            width_mult=4,
-        )
-
-    # FIX: Method to open the menu
     def open_menu(self):
-        """Opens the dropdown menu."""
+        """FIX: Creates the menu on the first press (lazy initialization) and opens it."""
+        # Create the menu if it doesn't exist yet
+        if not self.menu:
+            menu_items = [
+                {
+                    "viewclass": "OneLineIconListItem",
+                    "text": "Add manually",
+                    "height": dp(56),
+                    "on_release": self.show_add_account_dialog,
+                    "left_icon": "pencil"  # Correct property for icon
+                },
+                {
+                    "viewclass": "OneLineIconListItem",
+                    "text": "Import from API",
+                    "height": dp(56),
+                    "on_release": self.show_api_import_dialog,
+                    "left_icon": "cloud-upload-outline" # Correct property for icon
+                }
+            ]
+            self.menu = MDDropdownMenu(
+                caller=self.ids.add_button,
+                items=menu_items,
+                width_mult=4,
+            )
         self.menu.open()
 
     def show_add_account_dialog(self):
         """Creates and shows a new 'Add Account' dialog."""
-        if self.menu: # Close the menu before opening the dialog
+        if self.menu: 
             self.menu.dismiss()
             
         self.dialog = MDDialog(
@@ -87,6 +81,12 @@ class AccountsPanel(MDBoxLayout):
             ],
         )
         self.dialog.open()
+    
+    def show_api_import_dialog(self):
+        """Placeholder for the API import dialog."""
+        if self.menu: 
+            self.menu.dismiss()
+        print("Action: Show 'API Import' dialog (not implemented yet).")
 
     def close_dialog(self, *args):
         if self.dialog:
