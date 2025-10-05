@@ -4,9 +4,8 @@ from kivymd.app import MDApp
 
 # --- Import the custom screen and new Tab components ---
 from project_echo.screens.accounts_screen import AccountsPanel
-# FIX: Corrected the import paths according to KivyMD 2.0 structure
-from kivymd.uix.tabs import MDTabs
-from kivymd.uix.tab import MDTabsItem
+# FIX: Corrected the import paths to the actual submodule based on file listing
+from kivymd.uix.tab.tab import MDTabs, MDTabsItem
 from kivymd.uix.label import MDLabel
 
 # --- Load the KV file for the Accounts screen ---
