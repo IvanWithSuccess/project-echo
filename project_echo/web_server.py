@@ -8,7 +8,7 @@ import uuid
 import threading
 import datetime
 import time
-from flask import Flask, jsonify, render_template, request, send_from_directory
+from flask import Flask, jsonify, render_template, request, send_from_directory, Response
 from werkzeug.utils import secure_filename
 from project_echo.services.telegram_service import TelegramService
 
@@ -86,8 +86,13 @@ def index():
 def uploaded_file(filename):
     return send_from_directory(UPLOADS_DIR, filename)
 
-# --- API Routes (Truncated for brevity in this example) ---
+@app.route('/favicon.ico')
+@app.route('/apple-touch-icon.png')
+@app.route('/apple-touch-icon-precomposed.png')
+def favicon():
+    return Response(status=204)
 
+# --- API: Accounts ---
 @app.route('/api/accounts')
 def get_accounts():
     return jsonify(load_accounts())
@@ -212,7 +217,7 @@ def upload_avatar():
         file.save(path)
         return jsonify({"status": "ok", "path": path})
 
-
+# --- API: Proxies ---
 @app.route('/api/proxies')
 def get_proxies():
     return jsonify(load_proxies())
@@ -244,7 +249,7 @@ def check_proxy():
     loop.close()
     return jsonify({"status": "ok", "proxy_status": 'working' if is_working else 'not working'})
 
-
+# --- API: Tags ---
 @app.route('/api/tags')
 def get_tags():
     return jsonify(load_tags())
@@ -270,7 +275,7 @@ def delete_tag():
     save_accounts(accounts)
     return jsonify({"status": "ok", "message": "Tag deleted"})
 
-
+# --- API: Audiences ---
 @app.route('/api/audiences/scrape', methods=['POST'])
 def scrape_audience():
     data = request.json
@@ -288,7 +293,7 @@ def scrape_audience():
         return jsonify({"status": "ok", "users": users})
     return jsonify({"status": "error", "message": status}), 500
 
-@app.route('/api/audiences')
+@app.route('/api/audiences', methods=['GET'])
 def list_audiences():
     if not os.path.exists(AUDIENCE_DIR): return jsonify([])
     return jsonify([f for f in os.listdir(AUDIENCE_DIR) if f.endswith('.json')])
@@ -303,7 +308,7 @@ def save_audience():
     save_json(os.path.join(AUDIENCE_DIR, filename), users)
     return jsonify({"status": "ok", "message": f"Audience '{name}' saved."})
 
-@app.route('/api/audiences/<filename>')
+@app.route('/api/audiences/<filename>', methods=['GET'])
 def get_audience(filename):
     filepath = os.path.join(AUDIENCE_DIR, secure_filename(filename))
     if not os.path.exists(filepath): return jsonify({"status": "error", "message": "File not found"}), 404
@@ -317,7 +322,8 @@ def delete_audience():
     if os.path.exists(filepath): os.remove(filepath)
     return jsonify({"status": "ok", "message": "Audience deleted."})
 
-@app.route('/api/campaigns')
+# --- API: Campaigns ---
+@app.route('/api/campaigns', methods=['GET'])
 def get_campaigns():
     return jsonify(load_campaigns())
 
@@ -390,3 +396,9 @@ def run_campaign_thread(flask_app, campaign, users, account_phones, message):
         update_campaign_status(campaign_id, final_status, f"{sent_count}/{len(users)}")
         logging.info(f"[Campaign:{campaign_id}] {final_status}.")
         if campaign_id in active_campaign_threads: del active_campaign_threads[campaign_id]
+
+
+# --- Main Execution ---
+if __name__ == '__main__':
+    setup_directories()
+    app.run(debug=False, threaded=True, use_reloader=False)
