@@ -57,7 +57,8 @@ class AccountsPanel(MDBoxLayout):
         """Creates and populates the MDDataTable widget."""
         self.data_table = MDDataTable(
             size_hint=(1, 1),
-            use_pagination=True,
+            # FIX: Disabled pagination to avoid startup crash on KivyMD 1.2.0
+            # use_pagination=True,
             column_data=[
                 ("Phone", dp(30)),
                 ("Status", dp(20)),
@@ -77,7 +78,7 @@ class AccountsPanel(MDBoxLayout):
             print("Action: Show 'API Import' dialog (not implemented yet).")
 
     def show_add_account_dialog(self):
-        """FIX: Creates and shows a new 'Add Account' dialog every time to prevent state issues."""
+        """Creates and shows a new 'Add Account' dialog every time to prevent state issues."""
         self.dialog = MDDialog(
             title="Add New Account",
             type="custom",
