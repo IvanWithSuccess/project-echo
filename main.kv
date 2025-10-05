@@ -3,32 +3,38 @@
 # >> CUSTOM WIDGET DEFINITIONS
 # =========================================================================
 
-# FIX: Redefined NavButton as a layout that behaves like a button.
-# It is no longer based on a pre-existing button class.
 <NavButton>:
+    # This is a clickable layout, defined as a class in main.py
     orientation: 'vertical'
     size_hint: None, None
     size: dp(80), dp(72)
-    padding: [dp(8), dp(12), dp(8), dp(8)]
+    # FIX: Remove horizontal padding to allow children to center across the full width
+    padding: [0, dp(12), 0, dp(8)]
     spacing: dp(4)
 
-    # The container for the icon, ensuring it's centered.
-    MDBoxLayout:
-        adaptive_height: True
-        padding: [0, 0, 0, dp(4)]
-        MDIcon:
-            id: icon
-            icon: root.icon
-            halign: 'center'
-            font_size: dp(24)
+    # FIX: Add a canvas to make the whole widget area touch-sensitive for clicks.
+    canvas.before:
+        Color:
+            rgba: 0, 0, 0, 0 # Transparent background
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    # FIX: Icon and Label are now direct children, centered correctly.
+    MDIcon:
+        id: icon
+        icon: root.icon
+        halign: 'center'
+        font_size: dp(24)
+        size_hint_x: 1  # Take full width to allow horizontal centering
 
     MDLabel:
         text: root.text
         halign: 'center'
-        # FIX: Explicitly set a much smaller font size.
         font_style: "Caption"
         font_size: "10sp"
         adaptive_height: True
+        size_hint_x: 1  # Take full width to allow horizontal centering
 
 # =========================================================================
 # >> MAIN LAYOUT KV
