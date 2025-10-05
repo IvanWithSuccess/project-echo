@@ -4,10 +4,10 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton, MDRaisedButton
 from kivymd.uix.textfield import MDTextField
-# FIX: Import list components
 from kivymd.uix.list import ThreeLineAvatarIconListItem, IconLeftWidget
+# FIX: Import MDDropdownMenu
+from kivymd.uix.menu import MDDropdownMenu
 
-# KV string for the dialog content is still needed
 Builder.load_string("""
 <DialogContent>:
     orientation: "vertical"
@@ -30,30 +30,53 @@ Builder.load_string("""
 )
 
 class DialogContent(MDBoxLayout):
-    """Content widget for the 'Add Account' dialog."""
     pass
 
 class AccountsPanel(MDBoxLayout):
-    """A panel that displays a list of accounts and provides management options."""
-    
-    speed_dial_data = {
-        'cloud-upload-outline': 'Import from API',
-        'pencil': 'Add manually',
-    }
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.dialog = None
+        self.menu = None
 
-    def speed_dial_callback(self, instance):
-        icon = instance.icon
-        if icon == 'pencil':
-            self.show_add_account_dialog()
-        elif icon == 'cloud-upload-outline':
-            print("Action: Show 'API Import' dialog (not implemented yet).")
+    # FIX: Create the dropdown menu after the layout is ready
+    def on_kv_post(self, base_widget):
+        """Called after the kv file is loaded. Creates the dropdown menu."""
+        menu_items = [
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Add manually",
+                "height": dp(56),
+                "on_release": self.show_add_account_dialog,
+                "IconLeftWidget": {
+                    "icon": "pencil"
+                }
+            },
+            {
+                "viewclass": "OneLineIconListItem",
+                "text": "Import from API",
+                "height": dp(56),
+                "on_release": lambda: print("API Import placeholder"),
+                "IconLeftWidget": {
+                    "icon": "cloud-upload-outline"
+                }
+            }
+        ]
+        self.menu = MDDropdownMenu(
+            caller=self.ids.add_button,
+            items=menu_items,
+            width_mult=4,
+        )
+
+    # FIX: Method to open the menu
+    def open_menu(self):
+        """Opens the dropdown menu."""
+        self.menu.open()
 
     def show_add_account_dialog(self):
         """Creates and shows a new 'Add Account' dialog."""
+        if self.menu: # Close the menu before opening the dialog
+            self.menu.dismiss()
+            
         self.dialog = MDDialog(
             title="Add New Account",
             type="custom",
@@ -70,7 +93,6 @@ class AccountsPanel(MDBoxLayout):
             self.dialog.dismiss()
             self.dialog = None
 
-    # FIX: Rewritten to add items to the MDList
     def add_account(self, *args):
         if not self.dialog:
             return
@@ -81,16 +103,12 @@ class AccountsPanel(MDBoxLayout):
         description = content.ids.description_field.text
 
         if phone:
-            # Create a new list item
             list_item = ThreeLineAvatarIconListItem(
-                IconLeftWidget(
-                    icon="account-circle-outline"
-                ),
+                IconLeftWidget(icon="account-circle-outline"),
                 text=f"Phone: {phone}",
                 secondary_text=f"Tags: {tags}",
                 tertiary_text=f"Description: {description}",
             )
-            # Add the new item to the list
             self.ids.account_list.add_widget(list_item)
         
         self.close_dialog()
