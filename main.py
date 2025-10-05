@@ -1,30 +1,41 @@
 
 from kivy.lang import Builder
 from kivy.core.window import Window
+from kivy.utils import get_color_from_hex
 from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
-# --- Correctly import all necessary list components ---
-from kivymd.uix.list import OneLineIconListItem, IconLeftWidget
+from kivymd.uix.button import MDButton
 from kivymd.uix.label import MDLabel
 from functools import partial
 
 # Import our custom screen content
 from project_echo.screens.accounts_screen import AccountsPanel
 
-# Load the KV files
+# Load KV files
 Builder.load_file("project_echo/screens/accounts_screen.kv")
+
+# Define our custom button class directly in Python, linking it to the KV rule
+class NavButton(MDButton):
+    pass
 
 # =========================================================================
 # >> MAIN APP CLASS
 # ==========================================================================
 
 class ProjectEchoApp(MDApp):
-    """The main application class with side navigation."""
+    """The main application class with a custom side navigation."""
 
     def build(self):
         """Initializes the application and returns the root widget."""
-        self.theme_cls.primary_palette = "Blue"
-        self.theme_cls.theme_style = "Light"
+        # --- Point 6: Set color scheme to Dark with a custom accent color ---
+        self.theme_cls.theme_style = "Dark"
+        self.theme_cls.primary_palette = "Custom"
+        # Define the custom color "Mocha Mousse"
+        self.theme_cls.primary_hue = "500"
+        self.theme_cls.colors["Custom"] = {
+            "500": get_color_from_hex("#a58d78"),
+        }
+
         Window.maximize()
         return Builder.load_file('main.kv')
 
@@ -43,20 +54,18 @@ class ProjectEchoApp(MDApp):
                 screen.add_widget(AccountsPanel())
             else:
                 screen.add_widget(MDLabel(
-                    text=f"{screen_info['title']} content will be here",
+                    text=f"{screen_info['title']} content here",
                     halign="center"
                 ))
             self.root.ids.screen_manager.add_widget(screen)
 
-            # --- 2. Create the navigation button (Corrected Method) ---
-            nav_item = OneLineIconListItem(
+            # --- 2. Create the custom navigation button ---
+            nav_button = NavButton(
                 text=screen_info['title'],
+                icon=screen_info['icon'],
                 on_release=partial(self.switch_screen, screen_name)
             )
-            # Create an IconLeftWidget and add it to the list item
-            icon = IconLeftWidget(icon=screen_info['icon'])
-            nav_item.add_widget(icon)
-            self.root.ids.nav_list.add_widget(nav_item)
+            self.root.ids.nav_list.add_widget(nav_button)
 
         # Start on the dashboard screen
         self.root.ids.screen_manager.current = 'dashboard'
