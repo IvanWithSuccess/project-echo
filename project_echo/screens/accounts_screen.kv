@@ -1,27 +1,24 @@
 <AccountsPanel>:
-    MDRelativeLayout:
-        MDBoxLayout:
-            orientation: 'vertical'
-            padding: dp(24)
-            spacing: dp(24)
+    MDBoxLayout:
+        orientation: 'vertical'
+        padding: dp(24)
+        spacing: dp(24)
 
-            MDLabel:
-                text: "Accounts Management"
-                font_style: "H5"
-                adaptive_height: True
-                padding: [0, dp(12)]
+        MDLabel:
+            text: "Accounts Management"
+            font_style: "H5"
+            adaptive_height: True
+            padding: [0, dp(12)]
 
-            MDBoxLayout:
-                id: table_container
-                size_hint_y: 1
+        # FIX: Replaced table layout with a ScrollView and MDList
+        ScrollView:
+            MDList:
+                id: account_list
+                padding: 0
 
-        # FIX: Replaced the single FAB with a SpeedDial for multiple actions
-        FloatLayout:
-            # This layout provides padding for the speed dial button
-            padding: dp(24)
-            MDFloatingActionButtonSpeedDial:
-                id: speed_dial
-                data: root.speed_dial_data
-                root_button_anim: True
-                pos_hint: {'right': 1, 'bottom': 1}
-                callback: root.speed_dial_callback
+    # The SpeedDial button remains in the same place
+    MDFloatingActionButtonSpeedDial:
+        id: speed_dial
+        data: root.speed_dial_data
+        root_button_anim: True
+        callback: root.speed_dial_callback
