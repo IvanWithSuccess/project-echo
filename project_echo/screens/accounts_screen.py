@@ -1,30 +1,37 @@
-from kivy.uix.boxlayout import BoxLayout
-from kivymd.uix.list import OneLineIconListItem
-from kivymd.uix.dialog import MDDialog
-from kivymd.uix.button import MDFlatButton
+from kivymd.uix.boxlayout import MDBoxLayout
+from kivymd.uix.datatables import MDDataTable
+from kivy.metrics import dp
 
-
-# =========================================================================
-# >> ACCOUNTS PANEL WIDGET
-# =========================================================================
-
-class AccountsPanel(BoxLayout):
-    """ Widget that holds the UI for the 'Accounts' tab. """
-
+class AccountsPanel(MDBoxLayout):
+    """A panel that displays a table of accounts and provides management options."""
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        # Populate the list on initialization (example)
-        self.add_account("Initial Account 1")
-        self.add_account("Initial Account 2")
+        # on_kv_post is a more reliable method to call after the UI is built
+        self.on_kv_post = self.create_accounts_table
 
-    def add_account(self, account_name=None):
-        """ Adds a new account item to the list. 
-            If account_name is None, it will show a dialog (not implemented)."""
-        if account_name is None:
-            # This is where you would open a dialog to get the account name
-            print("Add account dialog should open here.")
-            return
+    def create_accounts_table(self, *args):
+        """Creates and populates the MDDataTable widget."""
+        # Define the table with rows and columns
+        self.data_table = MDDataTable(
+            size_hint=(1, 1),
+            use_pagination=True,
+            column_data=[
+                ("Phone", dp(30)),
+                ("Status", dp(20)),
+                ("Tags", dp(30)),
+                ("Description", dp(40)),
+            ],
+            row_data=[
+                ("+1234567890", "Active", "[Test, VIP]", "Main test account"),
+                ("+0987654321", "Inactive", "[New]", "Secondary account"),
+                # Add more sample rows as needed
+            ]
+        )
 
-        # Create a new list item and add it to the MDList
-        item = OneLineIconListItem(text=account_name)
-        self.ids.account_list.add_widget(item)
+        # Add the created table to the container defined in the KV file
+        self.ids.table_container.add_widget(self.data_table)
+
+    def show_add_account_dialog(self):
+        """Placeholder for the 'Add Account' functionality."""
+        print("Action: Show 'Add Account' dialog.")
+        # Later, this will open a MDDialog for adding an account

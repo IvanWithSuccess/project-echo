@@ -1,25 +1,24 @@
-<AccountsPanel>
-    MDBoxLayout:
-        orientation: 'vertical'
-        padding: dp(10)
-        spacing: dp(10)
-
-        # --- Header with Title and Add Button ---
+<AccountsPanel>:
+    MDRelativeLayout:
         MDBoxLayout:
-            adaptive_height: True
-            spacing: dp(10)
+            orientation: 'vertical'
+            padding: dp(24)
+            spacing: dp(24)
 
             MDLabel:
-                text: "Accounts"
-                # FIX: Reduced font size from H6 to Subtitle1 as requested
-                font_style: "Subtitle1"
+                text: "Accounts Management"
+                font_style: "H4"
                 adaptive_height: True
+                padding: [0, dp(12)]
 
-            MDIconButton:
-                icon: 'plus'
-                on_release: root.add_account()
+            # Container for the data table
+            MDBoxLayout:
+                id: table_container
 
-        # --- Scrollable List of Accounts ---
-        ScrollView:
-            MDList:
-                id: account_list
+        MDFloatingActionButton:
+            icon: "plus"
+            pos_hint: {"right": 1, "bottom": 1}
+            x: -dp(16)
+            y: dp(16)
+            md_bg_color: app.theme_cls.primary_color
+            on_release: root.show_add_account_dialog()
