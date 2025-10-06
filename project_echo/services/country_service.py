@@ -252,24 +252,32 @@ class CountryService:
         all_countries = []
         for name, code_or_codes in sorted(self._countries.items()):
             if isinstance(code_or_codes, list):
-                # For countries with multiple codes, create an entry for each
                 for code in code_or_codes:
                     all_countries.append((name, code))
             else:
                 all_countries.append((name, code_or_codes))
         return all_countries
 
-    def find_countries(self, search_text: str):
+    # FIX: Renamed and updated to return tuples for the new dialog
+    def search_countries(self, search_text: str):
         """Finds countries whose names start with the search text."""
         search_text = search_text.lower()
-        return [name for name in self._countries if name.lower().startswith(search_text)]
+        results = []
+        for name, code_or_codes in self._countries.items():
+            if name.lower().startswith(search_text):
+                if isinstance(code_or_codes, list):
+                    # Add an entry for each code
+                    for code in code_or_codes:
+                        results.append((name, code))
+                else:
+                    results.append((name, code_or_codes))
+        return sorted(results)
 
     def get_country_by_code(self, code_prefix: str):
         """Finds the most likely country name for a given phone code prefix."""
         if not code_prefix.startswith('+'):
             return None
         
-        # Search for the best match (longest prefix)
         best_match = None
         longest_match_len = 0
 
@@ -286,5 +294,5 @@ class CountryService:
         """Gets the primary phone code for a given country name."""
         code_or_codes = self._countries.get(country_name)
         if isinstance(code_or_codes, list):
-            return code_or_codes[0]  # Return the primary code
+            return code_or_codes[0]
         return code_or_codes

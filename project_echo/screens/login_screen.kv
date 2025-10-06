@@ -1,60 +1,78 @@
 <LoginScreen>:
-    name: "login_screen"
+    md_bg_color: self.theme_cls.backgroundColor
 
-    # FIX: Use MDFloatLayout as the root to overlay widgets
-    MDFloatLayout:
+    MDBoxLayout:
+        orientation: 'vertical'
+        padding: [dp(20), dp(50), dp(20), dp(50)]
+        spacing: dp(30)
 
-        # 1. The back arrow, positioned at the top-left
-        MDIconButton:
-            icon: "arrow-left"
-            pos_hint: {"top": 0.98, "x": 0.02}
-            on_release: app.root.ids.screen_manager.current = 'accounts'
+        MDLabel:
+            text: "Sign in to Project Echo"
+            halign: 'center'
+            font_style: 'Headline.5'
+            adaptive_height: True
 
-        # 2. The centered content block
-        MDAnchorLayout:
-            anchor_x: 'center'
-            anchor_y: 'center'
+        MDBoxLayout:
+            orientation: 'vertical'
+            spacing: dp(20)
+            adaptive_height: True
 
-            MDBoxLayout:
-                orientation: 'vertical'
+            # FIX: The field is now a button that opens the dialog
+            MDTextField:
+                id: country_field
+                hint_text: "Country"
+                readonly: True
+                on_focus: if self.focus: root.open_country_dialog()
+
+            MDTextField:
+                id: phone_field
+                hint_text: "Phone Number"
+                helper_text: "Include your country code (e.g., +1)"
+                helper_text_mode: "on_focus"
+
+        MDBoxLayout:
+            orientation: 'vertical'
+            adaptive_height: True
+            spacing: dp(10)
+
+            MDRaisedButton:
+                text: "NEXT"
+                on_release: root.on_next_button_press()
+                md_bg_color: self.theme_cls.primaryColor
+                pos_hint: {'center_x': 0.5}
+
+            MDSpinner:
+                id: spinner
                 size_hint: None, None
-                adaptive_height: True
-                width: "500dp"
-                spacing: "20dp"
+                size: dp(46), dp(46)
+                pos_hint: {'center_x': 0.5}
+                active: False
 
-                MDLabel:
-                    text: "Sign in to Telegram"
-                    halign: 'center'
-                    font_style: 'H4'
-                    adaptive_height: True
+# ==============================================================================
+# >> COUNTRY DIALOG WITH SEARCH AND RECYCLEVIEW
+# ==============================================================================
+<CountryListItem>:
+    on_release: root.select_country(self)
 
-                MDLabel:
-                    text: "Choose your country and enter your phone number."
-                    halign: 'center'
-                    adaptive_height: True
-                    theme_text_color: "Secondary"
+<CountryDialogContent@MDBoxLayout>:
+    orientation: "vertical"
+    spacing: dp(10)
+    padding: dp(10)
 
-                MDTextField:
-                    id: country_field
-                    hint_text: "Country"
-                    readonly: True
-                    on_focus: if self.focus: root.open_country_dialog()
+    MDTextField:
+        id: search_field
+        hint_text: "Search for a country..."
+        on_text: root.filter_countries(self.text)
 
-                MDTextField:
-                    id: phone_field
-                    hint_text: "Phone Number"
-                    helper_text: "Include your country code (e.g., +1 for USA)"
-                    helper_text_mode: "on_focus"
+    RecycleView:
+        id: rv
+        key_viewclass: 'viewclass'
+        key_size: 'height'
 
-                MDRaisedButton:
-                    text: "NEXT"
-                    pos_hint: {'center_x': 0.5}
-                    on_release: root.on_next_button_press()
+        RecycleBoxLayout:
+            default_size: None, dp(56)
+            default_size_hint: 1, None
+            size_hint_y: None
+            height: self.minimum_height
+            orientation: 'vertical'
 
-        # 3. The spinner, also overlaid
-        MDSpinner:
-            id: spinner
-            size_hint: None, None
-            size: dp(46), dp(46)
-            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-            active: False

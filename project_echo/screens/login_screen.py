@@ -2,23 +2,53 @@ from kivy.uix.screenmanager import Screen
 from kivy.clock import Clock
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
-from kivymd.uix.button import MDFlatButton
-from kivymd.uix.list import OneLineAvatarIconListItem
-from kivy.properties import StringProperty
+from kivymd.uix.button import MDFlatButton, MDRaisedButton
+from kivymd.uix.list import OneLineListItem
+from kivy.properties import StringProperty, ListProperty
+from kivy.uix.boxlayout import BoxLayout
+from kivy.lang import Builder
 
 
-class CountryListItem(OneLineAvatarIconListItem):
+# =============================================================================
+# >> DIALOG-RELATED CLASSES
+# =============================================================================
+
+# FIX: Define the content of the dialog in a separate class
+class CountryDialogContent(BoxLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # We need to access the screen to update its data
+        self.screen = MDApp.get_running_app().root.get_screen('login_screen')
+
+    def filter_countries(self, search_text):
+        """Called when the user types in the search field."""
+        self.screen.filter_countries(search_text)
+
+# FIX: A simple list item for the RecycleView
+class CountryListItem(OneLineListItem):
     code = StringProperty()
 
+    def select_country(self, instance):
+        """Called when a country is selected from the list."""
+        self.parent.parent.parent.parent.parent.screen.select_country(instance)
+
+
+# =============================================================================
+# >> LOGIN SCREEN
+# =============================================================================
 
 class LoginScreen(Screen):
     """Login screen for entering phone number."""
+    # FIX: Use ListProperty for the RecycleView data
+    rv_data = ListProperty([])
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.app = MDApp.get_running_app()
         self.dialog = None
         self.country_dialog = None
+        # FIX: Pre-load all countries for performance
+        self.all_countries = self.app.country_service.get_all_countries()
 
     def on_enter(self, *args):
         self.ids.spinner.active = False
@@ -39,11 +69,9 @@ class LoginScreen(Screen):
             self.show_error_dialog("Country and phone number are required.")
             return
 
-        # FIX: Use the correct method name `get_country_code`
         full_phone = phone if phone.startswith('+') else f"{self.app.country_service.get_country_code(country)}{phone}"
         self.app.phone_to_verify = full_phone
         self.ids.spinner.active = True
-
         self.app.run_async(self.async_send_code(full_phone))
 
     async def async_send_code(self, phone):
@@ -59,27 +87,44 @@ class LoginScreen(Screen):
         else:
             self.show_error_dialog(result.get("error", "An unknown error occurred."))
 
-    # FIX: Correctly unpack the tuple from `get_all_countries`
+    # =========================================================================
+    # >> NEW, HIGH-PERFORMANCE COUNTRY DIALOG
+    # =========================================================================
+
     def open_country_dialog(self):
         if not self.country_dialog:
-            items = []
-            # Correctly unpack (country_name, code) tuple
-            for country_name, code in self.app.country_service.get_all_countries():
-                item = CountryListItem(text=country_name, code=str(code) if code else "")
-                item.bind(on_release=self.select_country)
-                items.append(item)
-
             self.country_dialog = MDDialog(
                 title="Choose a Country",
-                type="simple",
-                items=items,
+                type="custom",
+                content_cls=CountryDialogContent(),
             )
+        self.filter_countries("") # Populate with all countries initially
         self.country_dialog.open()
 
-    def select_country(self, instance):
-        self.ids.country_field.text = instance.text
-        self.ids.phone_field.text = instance.code
-        self.country_dialog.dismiss()
+    def filter_countries(self, search_text=""):
+        """Filters the countries in the RecycleView based on search text."""
+        if not search_text:
+            countries_to_display = self.all_countries
+        else:
+            countries_to_display = self.app.country_service.search_countries(search_text)
+        
+        # Update the data for the RecycleView
+        self.country_dialog.content_cls.ids.rv.data = [
+            {
+                'viewclass': 'CountryListItem',
+                'text': f"{name} ({code})",
+                'code': code,
+                'on_release': lambda x=code, y=name: self.select_country(y, x)
+            }
+            for name, code in countries_to_display
+        ]
+
+    def select_country(self, country_name, country_code):
+        """Handle the selection of a country from the dialog."""
+        self.ids.country_field.text = country_name
+        self.ids.phone_field.text = country_code
+        if self.country_dialog:
+            self.country_dialog.dismiss()
 
     def show_error_dialog(self, text):
         if not self.dialog:
