@@ -1,18 +1,19 @@
-from kivymd.uix.screen import MDScreen  # FIX: Inherit from MDScreen
+from kivy.uix.screenmanager import Screen
 from kivy.clock import Clock
-from kivymd.app import MDApp
-from kivymd.uix.dialog import MDDialog
-from kivymd.uix.button import MDFlatButton
+from kivy.app import App
+from kivy.uix.popup import Popup
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.button import Button
 
-# FIX: Inherit from MDScreen to get theme properties
-class PasswordVerificationScreen(MDScreen):
+class PasswordVerificationScreen(Screen):
     """
     Screen for entering the two-factor authentication password.
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.app = MDApp.get_running_app()
-        self.dialog = None
+        self.app = App.get_running_app()
+        self.error_popup = None
 
     def on_enter(self, *args):
         self.ids.spinner.active = False
@@ -21,11 +22,10 @@ class PasswordVerificationScreen(MDScreen):
     def verify_password(self):
         password = self.ids.password_field.text
         if not password:
-            self.show_error_dialog("Please enter your password.")
+            self.show_error_popup("Please enter your password.")
             return
 
         self.ids.spinner.active = True
-        # FIX: Use the new reliable async runner
         self.app.run_async(self.async_verify_password(password))
 
     async def async_verify_password(self, password):
@@ -44,18 +44,17 @@ class PasswordVerificationScreen(MDScreen):
             self.app.save_session(self.app.phone_to_verify, result["session_string"])
         else:
             error_message = result.get("error", "An unknown error occurred.")
-            self.show_error_dialog(error_message)
+            self.show_error_popup(error_message)
 
-    def show_error_dialog(self, text):
-        if not self.dialog:
-            self.dialog = MDDialog(
-                title="Authentication Failed",
-                text=text,
-                buttons=[
-                    MDFlatButton(
-                        text="OK", on_release=lambda x: self.dialog.dismiss()
-                    ),
-                ],
-            )
-        self.dialog.text = text
-        self.dialog.open()
+    def show_error_popup(self, text):
+        if self.error_popup:
+            self.error_popup.dismiss()
+
+        content = BoxLayout(orientation='vertical', spacing=10, padding=10)
+        content.add_widget(Label(text=text, halign='center'))
+        ok_button = Button(text="OK", size_hint_y=None, height=44)
+        content.add_widget(ok_button)
+
+        self.error_popup = Popup(title="Authentication Failed", content=content, size_hint=(0.8, 0.4))
+        ok_button.bind(on_release=self.error_popup.dismiss)
+        self.error_popup.open()
