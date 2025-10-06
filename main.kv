@@ -2,18 +2,14 @@
 #:import Window kivy.core.window.Window
 #:import NoTransition kivy.uix.screenmanager.NoTransition
 
-# Style for navigation buttons
-<NavButton@Button>:
+# More robust way to create an icon button
+# We combine ButtonBehavior (for on_release events) with an Image.
+<NavButton@ButtonBehavior+Image>:
     size_hint_y: None
     height: '60dp'
-    # Make background transparent to show the icon image
-    background_color: (0, 0, 0, 0)
-    # Remove the default button border
-    border: (0, 0, 0, 0)
-    # Set the normal background to be empty, so it can be defined in the instance
-    background_normal: ''
-    # Use a slightly darker background on press for visual feedback
-    background_down: ''
+    # Keep the aspect ratio of the image
+    keep_ratio: True
+    allow_stretch: True
 
 # --- The ONE Root Widget ---
 BoxLayout:
@@ -24,12 +20,12 @@ BoxLayout:
         id: nav_panel
         orientation: 'vertical'
         size_hint_x: None
-        width: '80dp' # Reduced width for icon-based navigation
+        width: '80dp'
         padding: '10dp'
         spacing: '10dp'
         canvas.before:
             Color:
-                rgba: (0.95, 0.95, 0.95, 1) # Light gray background
+                rgba: (0.95, 0.95, 0.95, 1)
             Rectangle:
                 pos: self.pos
                 size: self.size
@@ -40,24 +36,22 @@ BoxLayout:
             bold: True
             size_hint_y: None
             height: '48dp'
-            color: (0, 0, 0, 1) # Black text
+            color: (0, 0, 0, 1)
 
+        # Use the new NavButton definition with the 'source' property
         NavButton:
             id: dashboard_button
-            background_normal: 'assets/icons/dashboard.png'
-            background_down: 'assets/icons/dashboard.png' # Use same image for pressed state
+            source: 'assets/icons/dashboard.png'
             on_release: app.switch_panel('dashboard')
 
         NavButton:
             id: accounts_button
-            background_normal: 'assets/icons/accounts.png'
-            background_down: 'assets/icons/accounts.png'
+            source: 'assets/icons/accounts.png'
             on_release: app.switch_panel('accounts')
 
         NavButton:
             id: campaigns_button
-            background_normal: 'assets/icons/campaigns.png'
-            background_down: 'assets/icons/campaigns.png'
+            source: 'assets/icons/campaigns.png'
             on_release: app.switch_panel('campaigns')
 
         Widget: # Spacer
@@ -68,7 +62,7 @@ BoxLayout:
         id: content_panel
         canvas.before:
             Color:
-                rgba: (1, 1, 1, 1) # White background
+                rgba: (1, 1, 1, 1)
             Rectangle:
                 pos: self.pos
                 size: self.size
@@ -88,7 +82,6 @@ BoxLayout:
                 AccountsPanel:
                     id: accounts_panel
 
-            # This screen is now defined, preventing the crash
             Screen:
                 name: 'campaigns'
                 Label:
