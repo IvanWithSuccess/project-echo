@@ -2,21 +2,17 @@
 #:import Window kivy.core.window.Window
 #:import NoTransition kivy.uix.screenmanager.NoTransition
 
-# CORRECTED: Mix ButtonBehavior directly into the FloatLayout
 <NavButton@ButtonBehavior+FloatLayout>:
     size_hint_y: None
-    # Increased button height to better accommodate the larger icon
-    height: '60dp'
+    # CHANGED: Button height is now 48dp
+    height: '48dp'
     source: ''
     panel_name: ''
-    # The on_release event now belongs to the NavButton itself
     on_release: app.switch_panel(root.panel_name)
 
-    # The actual icon image
     Image:
         source: root.source
         size_hint: None, None
-        # CHANGED: Increased icon size by 1.5x (28 * 1.5 = 42)
         size: (dp(42), dp(42))
         pos_hint: {'center_x': 0.5, 'center_y': 0.5}
 
@@ -47,7 +43,6 @@ BoxLayout:
             height: '48dp'
             color: (0, 0, 0, 1)
 
-        # Use the corrected NavButton definition
         NavButton:
             panel_name: 'dashboard'
             source: 'assets/icons/dashboard.png'
