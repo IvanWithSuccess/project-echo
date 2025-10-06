@@ -6,7 +6,7 @@ from kivy.uix.button import Button
 class AccountsPanel(BoxLayout):
     """A panel to display and manage user accounts using standard Kivy widgets."""
 
-    def populate_accounts(self):
+    def load_accounts(self):
         """
         Scans the root directory for .session files and populates the list.
         This method is called from the main app to ensure the list is always fresh.
