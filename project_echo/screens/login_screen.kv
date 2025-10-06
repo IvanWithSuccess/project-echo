@@ -1,54 +1,53 @@
 <LoginScreen>:
-    name: "login"
+    id: login_screen
+    name: 'login'
 
-    FloatLayout:
-        # The centered content block
-        BoxLayout:
-            orientation: 'vertical'
-            size_hint: None, None
-            width: "500dp"
-            height: self.minimum_height
-            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-            spacing: "20dp"
+    # Center the entire login form
+    BoxLayout:
+        orientation: 'vertical'
+        size_hint: 0.5, None # Take 50% of screen width
+        height: self.minimum_height
+        pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+        spacing: '15dp'
 
-            Label:
-                text: "Sign in to Project Echo"
-                font_size: '22sp'
-                bold: True
-                color: (0, 0, 0, 1)
-                size_hint_y: None
-                height: self.texture_size[1]
+        Label:
+            text: 'Sign in to Project Echo'
+            font_size: '24sp'
+            size_hint_y: None
+            height: '40dp'
+            color: (0, 0, 0, 1) # Black text
+            bold: True
+        
+        # REMOVED: The country selection button is no longer needed.
 
-            # Country selection button
-            Button:
-                id: country_button
-                text: root.selected_country_name or "Choose a Country"
-                size_hint_y: None
-                height: dp(48)
-                background_color: (0.9, 0.9, 0.9, 1) # Light gray
-                color: (0, 0, 0, 1) # Black text
-                on_release: root.show_country_dialog()
+        # Phone number input
+        TextInput:
+            id: phone_field
+            hint_text: 'Phone Number (e.g., +1234567890)' # UPDATED placeholder
+            multiline: False
+            size_hint_y: None
+            height: '48dp'
+            font_size: '16sp'
+            padding: [10, 15, 10, 15]
+            background_normal: ''
+            background_color: [240/255, 240/255, 240/255, 1]
+            cursor_color: [0, 0, 0, 1]
+            foreground_color: [0, 0, 0, 1]
 
-            TextInput:
-                id: phone_field
-                hint_text: "Phone Number"
-                multiline: False
-                size_hint_y: None
-                height: dp(48)
-                padding: [dp(10), (dp(48) - self.font_size) / 2]
+        # Next button
+        Button:
+            text: 'NEXT'
+            size_hint_y: None
+            height: '48dp'
+            on_release: root.send_code()
+            background_color: (0.1, 0.3, 0.5, 1) # Dark blue
+            color: (1, 1, 1, 1) # White text
+            background_normal: ''
 
-            Button:
-                text: "NEXT"
-                size_hint_y: None
-                height: dp(48)
-                background_color: (0.1, 0.5, 0.8, 1) # A nice blue
-                color: (1, 1, 1, 1) # White text
-                on_release: root.send_code()
-
-            # This label will act as a spinner/loading indicator
-            Label:
-                id: spinner_label
-                text: ""
-                color: (0, 0, 0, 1)
-                size_hint_y: None
-                height: self.texture_size[1]
+        # Spinner/loading label
+        Label:
+            id: spinner_label
+            text: ''
+            size_hint_y: None
+            height: '20dp'
+            color: (0, 0, 0, 1)

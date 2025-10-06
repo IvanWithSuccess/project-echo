@@ -18,7 +18,8 @@ from project_echo.screens.password_verification_screen import PasswordVerificati
 # Import the new campaigns screen that will be created
 from project_echo.screens.campaigns_screen import CampaignsScreen
 from project_echo.services.telegram_service import TelegramService
-from project_echo.services.country_service import CountryService
+# REMOVED: CountryService is no longer needed.
+# from project_echo.services.country_service import CountryService
 
 
 class ProjectEchoApp(App):
@@ -30,12 +31,14 @@ class ProjectEchoApp(App):
     phone_code_hash = StringProperty(None)
     session_string_for_password = StringProperty(None)
     telegram_service = ObjectProperty(None)
-    country_service = ObjectProperty(None)
+    # REMOVED: country_service is no longer needed.
+    # country_service = ObjectProperty(None)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.telegram_service = TelegramService()
-        self.country_service = CountryService()
+        # REMOVED: country_service is no longer needed.
+        # self.country_service = CountryService()
 
     def build(self):
         """
@@ -70,10 +73,10 @@ class ProjectEchoApp(App):
         """Called when 'Add Account' is pressed."""
         self.root.ids.screen_manager.current = 'login'
 
-    # --- Country Service Helper ---
-    def get_country_code(self, country_name: str):
-        """Gets the phone code for a given country name from the service."""
-        return self.country_service.get_country_code(country_name)
+    # REMOVED: Country service helper is no longer needed.
+    # def get_country_code(self, country_name: str):
+    #     """Gets the phone code for a given country name from the service."""
+    #     return self.country_service.get_country_code(country_name)
 
     # --- Asynchronous Operations ---
 
