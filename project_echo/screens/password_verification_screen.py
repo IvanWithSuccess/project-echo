@@ -1,10 +1,11 @@
-from kivy.uix.screenmanager import Screen
+from kivymd.uix.screen import MDScreen  # FIX: Inherit from MDScreen
 from kivy.clock import Clock
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
 
-class PasswordVerificationScreen(Screen):
+# FIX: Inherit from MDScreen to get theme properties
+class PasswordVerificationScreen(MDScreen):
     """
     Screen for entering the two-factor authentication password.
     """
