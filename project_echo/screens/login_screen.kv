@@ -1,5 +1,5 @@
 <LoginScreen>:
-    md_bg_color: self.theme_cls.bg_color
+    # md_bg_color: self.theme_cls.bg_color  <- FIX: Removed this line
 
     MDBoxLayout:
         orientation: 'vertical'
@@ -37,7 +37,8 @@
             MDRaisedButton:
                 text: "NEXT"
                 on_release: root.on_next_button_press()
-                md_bg_color: self.theme_cls.primary_color
+                # FIX: Correct way to set button color for KivyMD 1.2.0
+                md_bg_color: app.theme_cls.primary_color
                 pos_hint: {'center_x': 0.5}
 
             MDSpinner:
@@ -47,6 +48,9 @@
                 pos_hint: {'center_x': 0.5}
                 active: False
 
+# ==============================================================================
+# >> COUNTRY DIALOG WITH SEARCH AND RECYCLEVIEW
+# ==============================================================================
 <CountryListItem>:
     on_release: root.select_country(self)
 
