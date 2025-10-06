@@ -1,84 +1,96 @@
 import asyncio
-import os
 from telethon import TelegramClient
 from telethon.sessions import StringSession
-from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError, PasswordHashInvalidError
-from telethon.tl import functions
-
+from telethon.errors import SessionPasswordNeededError, PhoneCodeExpiredError, FloodWaitError
 from project_echo.config import API_ID, API_HASH
-
 
 class TelegramService:
     """
-    Handles interactions with the Telegram API in a stateless manner
-    to prevent asyncio event loop conflicts.
+    A service for handling interactions with the Telegram API.
     """
 
     def __init__(self):
-        pass
+        self.active_clients = {}
 
-    async def send_code(self, phone):
+    def get_client_for_phone(self, phone):
         """
-        Creates a new client, sends the code, and returns the session state.
+        Gets or creates a client for a specific phone number to maintain session state.
+        This is crucial for multi-step processes like login.
         """
-        client = TelegramClient(StringSession(), API_ID, API_HASH)
+        if phone not in self.active_clients:
+            # Use an in-memory session for the initial login flow.
+            # We will create a StringSession only after successful login.
+            self.active_clients[phone] = TelegramClient(StringSession(), API_ID, API_HASH)
+        return self.active_clients[phone]
+
+    async def send_code(self, phone: str):
+        """
+        Sends a verification code to the user's Telegram account.
+        Reuses the client to keep the session alive.
+        """
+        client = self.get_client_for_phone(phone)
         try:
-            await client.connect()
-            if not await client.is_user_authorized():
-                result = await client.send_code_request(phone)
-                session_string = client.session.save()
-                return {
-                    "success": True,
-                    "phone_code_hash": result.phone_code_hash,
-                    "session_string": session_string,
-                }
-            else:
-                return {"success": False, "error": "User is already authorized."}
+            if not client.is_connected():
+                await client.connect()
+            
+            # This sends the code and stores the hash for the next step.
+            sent_code = await client.send_code_request(phone)
+            return {
+                "success": True,
+                "phone_code_hash": sent_code.phone_code_hash
+            }
+        except FloodWaitError as e:
+            return {"success": False, "error": f"Flood wait: please try again in {e.seconds} seconds."}
         except Exception as e:
-            return {"success": False, "error": str(e)}
-        finally:
-            if client.is_connected():
-                await client.disconnect()
+            print(f"Error sending code: {e}")
+            return {"success": False, "error": f"Failed to send code: {e}"}
 
-    async def verify_code(self, session_string, phone, code, phone_code_hash, password=None):
+    async def verify_code_and_get_session(self, phone: str, code: str, phone_code_hash: str):
         """
-        Restores a client from a session string, verifies the code or password,
-        and returns the result.
+        Verifies the code and, if successful, returns the session string.
+        Handles 2FA by returning a specific status.
         """
-        client = TelegramClient(StringSession(session_string), API_ID, API_HASH)
+        client = self.get_client_for_phone(phone)
         try:
-            await client.connect()
+            if not client.is_connected():
+                await client.connect()
 
-            if not password:
-                try:
-                    await client.sign_in(phone=phone, code=code, phone_code_hash=phone_code_hash)
-                except SessionPasswordNeededError:
-                    # FIX: Make a separate request to get password info (including hint)
-                    password_info = await client(functions.account.GetPasswordRequest())
-                    updated_session_string = client.session.save()
-                    return {
-                        "password_needed": True,
-                        "hint": password_info.hint,
-                        "session_string": updated_session_string
-                    }
+            await client.sign_in(phone=phone, code=code, phone_code_hash=phone_code_hash)
+            session_string = client.session.save()
+            await client.disconnect()
+            del self.active_clients[phone] # Clean up
+            return {"success": True, "session_string": session_string}
 
-            if password:
-                try:
-                    await client.sign_in(password=password)
-                except PasswordHashInvalidError:
-                    return {"success": False, "error": "Invalid password. Please try again."}
-
-            if await client.is_user_authorized():
-                final_session_string = client.session.save()
-                return {"success": True, "session_string": final_session_string}
-            else:
-                return {"success": False, "error": "An unknown authorization error occurred."}
-
-        except PhoneCodeInvalidError:
-            return {"success": False, "error": "The confirmation code is invalid."}
+        except SessionPasswordNeededError:
+            # The user has 2FA enabled. We need to prompt for the password.
+            # The current session is now authorized to accept a password.
+            return {"success": False, "status": "2fa_needed"}
+        
+        except PhoneCodeExpiredError:
+            return {"success": False, "error": "The confirmation code has expired."}
         except Exception as e:
-            # Return the actual error to the UI for better debugging
-            return {"success": False, "error": f"{type(e).__name__}: {e}"}
-        finally:
-            if client.is_connected():
-                await client.disconnect()
+            print(f"Error verifying code: {e}")
+            await client.disconnect()
+            del self.active_clients[phone] # Clean up
+            return {"success": False, "error": f"Verification failed: {e}"}
+
+    async def verify_password(self, phone: str, password: str):
+        """
+        Verifies the 2FA password and returns the session string if successful.
+        """
+        client = self.get_client_for_phone(phone)
+        try:
+            if not client.is_connected():
+                await client.connect()
+
+            await client.sign_in(password=password)
+            session_string = client.session.save()
+            await client.disconnect()
+            del self.active_clients[phone] # Clean up
+            return {"success": True, "session_string": session_string}
+
+        except Exception as e:
+            print(f"Error verifying password: {e}")
+            await client.disconnect()
+            del self.active_clients[phone] # Clean up
+            return {"success": False, "error": f"2FA login failed: {e}"}

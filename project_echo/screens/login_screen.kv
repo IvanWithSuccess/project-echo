@@ -5,26 +5,28 @@
     # Center the entire login form
     BoxLayout:
         orientation: 'vertical'
-        size_hint: 0.5, None # Take 50% of screen width
+        # CHANGED: Made the form narrower
+        size_hint: 0.4, None 
         height: self.minimum_height
         pos_hint: {'center_x': 0.5, 'center_y': 0.5}
         spacing: '15dp'
 
         Label:
-            text: 'Sign in to Project Echo'
+            # CHANGED: Updated the title
+            text: 'Вход в Телеграм'
             font_size: '24sp'
             size_hint_y: None
             height: '40dp'
-            color: (0, 0, 0, 1) # Black text
+            color: (0, 0, 0, 1)
             bold: True
         
-        # REMOVED: The country selection button is no longer needed.
-
         # Phone number input
         TextInput:
             id: phone_field
-            hint_text: 'Phone Number (e.g., +1234567890)' # UPDATED placeholder
+            hint_text: 'Phone Number (e.g., +1234567890)'
             multiline: False
+            # ADDED: Center the hint and input text
+            halign: 'center'
             size_hint_y: None
             height: '48dp'
             font_size: '16sp'
@@ -40,8 +42,8 @@
             size_hint_y: None
             height: '48dp'
             on_release: root.send_code()
-            background_color: (0.1, 0.3, 0.5, 1) # Dark blue
-            color: (1, 1, 1, 1) # White text
+            background_color: (0.1, 0.3, 0.5, 1)
+            color: (1, 1, 1, 1)
             background_normal: ''
 
         # Spinner/loading label
