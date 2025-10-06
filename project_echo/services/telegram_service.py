@@ -1,83 +1,69 @@
 import asyncio
+import os
 from telethon.sync import TelegramClient
-from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
+from telethon.sessions import StringSession
+from telethon.errors import SessionPasswordNeededError
 
-# FIX: Import credentials from the central config file
-from ..config import API_ID, API_HASH
+from project_echo.config import API_ID, API_HASH
+
 
 class TelegramService:
-    """
-    An asynchronous service to handle all interactions with the Telegram API.
-    This ensures the UI never freezes during network requests.
-    """
+    """Handles all interactions with the Telegram API."""
 
     def __init__(self):
-        self.client = None
-        self._sent_code = None
+        self.sessions_dir = "sessions"
+        os.makedirs(self.sessions_dir, exist_ok=True)
+        self.clients = {}
 
-    async def send_code(self, phone_number: str) -> dict:
-        """
-        Connects to Telegram and sends a verification code.
-        
-        Args:
-            phone_number: The user's phone number.
+    async def _get_client(self, phone):
+        if phone not in self.clients:
+            session_path = os.path.join(self.sessions_dir, f"{phone}.session")
+            self.clients[phone] = TelegramClient(session_path, API_ID, API_HASH)
+        return self.clients[phone]
 
-        Returns:
-            A dictionary with 'success': True or 'success': False and 'error': message.
-        """
+    async def send_code(self, phone):
+        client = await self._get_client(phone)
         try:
-            self.client = TelegramClient(phone_number, API_ID, API_HASH)
-            await self.client.connect()
-
-            if await self.client.is_user_authorized():
+            await client.connect()
+            if not await client.is_user_authorized():
+                result = await client.send_code_request(phone)
+                return {"success": True, "phone_code_hash": result.phone_code_hash}
+            else:
                 return {"success": False, "error": "User is already authorized."}
-
-            self._sent_code = await self.client.send_code_request(phone_number)
-            return {"success": True}
-
         except Exception as e:
-            print(f"[TelegramService] Error sending code: {e}")
             return {"success": False, "error": str(e)}
+        finally:
+            if client.is_connected():
+                await client.disconnect()
 
-    async def verify_code(self, code: str, password: str = None) -> dict:
+    async def verify_code(self, phone, code, phone_code_hash, password=None):
         """
-        Verifies the code and logs the user in, handling 2FA.
-
-        Args:
-            code: The verification code received by the user.
-            password: The 2FA password (if any).
-
-        Returns:
-            A dictionary indicating success, failure, or if a password is needed.
+        FIX: Handles 2FA (password) correctly by catching SessionPasswordNeededError
+        and retrying the sign-in with the provided password.
         """
-        if not self.client or not self.client.is_connected():
-            return {"success": False, "error": "Client not connected. Please try again."}
-
+        client = await self._get_client(phone)
         try:
-            await self.client.sign_in(code=code, phone_hash=self._sent_code.phone_code_hash)
-            return {"success": True}
+            await client.connect()
+            await client.sign_in(phone=phone, code=code, phone_code_hash=phone_code_hash)
 
-        except PhoneCodeInvalidError:
-            return {"success": False, "error": "Invalid verification code."}
+            session_string = client.session.save()
+            # The session file is already saved by the client, but the string can be stored elsewhere.
+            return {"success": True, "session_string": session_string}
 
-        except SessionPasswordNeededError:
-            if not password:
-                hint = await self.client.get_password_hint()
+        except SessionPasswordNeededError as e:
+            if password:
+                try:
+                    await client.sign_in(password=password)
+                    session_string = client.session.save()
+                    return {"success": True, "session_string": session_string}
+                except Exception as e_pass:
+                    return {"success": False, "error": str(e_pass)}
+            else:
+                # The UI needs to ask for the password. We can pass the hint along.
+                hint = await client.get_password_hint()
                 return {"success": False, "password_needed": True, "hint": hint}
-            
-            try:
-                await self.client.sign_in(password=password)
-                return {"success": True}
-            except Exception as e:
-                return {"success": False, "error": str(e)}
-
         except Exception as e:
-            print(f"[TelegramService] Error verifying code: {e}")
             return {"success": False, "error": str(e)}
-
-    async def disconnect(self):
-        """
-        Disconnects the client if it's connected.
-        """
-        if self.client and self.client.is_connected():
-            await self.client.disconnect()
+        finally:
+            if client.is_connected():
+                await client.disconnect()

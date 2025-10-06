@@ -1,45 +1,49 @@
 import asyncio
 
-from kivy.lang import Builder
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.screen import MDScreen
 
-# FIX: Removed Builder call. All KV files will be loaded centrally in main.py
 
 class CodeVerificationScreen(MDScreen):
-    """The code verification screen, refactored for asynchronous operation."""
+    """The code verification screen, refactored for asynchronous operation and stability."""
 
     def on_pre_enter(self, *args):
-        """Clear fields and set focus when the screen is shown."""
         self.app = MDApp.get_running_app()
         self.ids.code_field.text = ""
         self.ids.password_field.text = ""
-        self.ids.password_field.hint_text = "2FA Password (if any)"
         self.ids.password_field.disabled = True
         self.ids.spinner.active = False
         self.ids.code_field.focus = True
+        self.ids.info_label.text = f"Enter the code sent to {self.app.phone_to_verify}"
 
     def verify_code(self):
-        """Starts the asynchronous code verification process."""
-        asyncio.create_task(self.verify_code_async())
+        """
+        FIX: Uses asyncio.run to correctly start the async task from sync Kivy code.
+        """
+        try:
+            asyncio.run(self.verify_code_async())
+        except RuntimeError as e:
+            print(f"Ignoring nested asyncio loop error: {e}")
 
     async def verify_code_async(self):
         """The async part of the verification. Calls the telegram service."""
         self.ids.spinner.active = True
         code = self.ids.code_field.text
         password = self.ids.password_field.text
+        phone = self.app.phone_to_verify
+        phone_code_hash = self.app.phone_code_hash
 
         password_to_send = password if not self.ids.password_field.disabled and password else None
 
-        result = await self.app.telegram_service.verify_code(code, password_to_send)
+        # FIX: Pass the phone_code_hash to the verification method.
+        result = await self.app.telegram_service.verify_code(phone, code, phone_code_hash, password_to_send)
 
         self.ids.spinner.active = False
 
         if result.get("success"):
             self.show_dialog("Success!", "You have successfully logged in.")
-            await self.app.telegram_service.disconnect()
             # Switch to accounts and trigger a refresh
             self.app.switch_screen('accounts')
         elif result.get("password_needed"):

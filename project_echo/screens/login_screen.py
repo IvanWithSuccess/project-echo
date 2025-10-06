@@ -2,7 +2,6 @@ import asyncio
 from functools import partial
 
 from kivy.clock import Clock
-from kivy.lang import Builder
 from kivy.properties import ObjectProperty
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
@@ -27,7 +26,7 @@ class LoginScreen(MDScreen):
 
     def open_country_dialog(self):
         """
-        FIX: Opens the dialog instantly and populates the list asynchronously
+        Opens the dialog instantly and populates the list asynchronously
         to prevent the UI from hanging or feeling laggy.
         """
         if not self.country_dialog:
@@ -40,17 +39,14 @@ class LoginScreen(MDScreen):
             )
             self.country_dialog = MDDialog(title="Choose a Country", type="custom", content_cls=content_layout)
 
-        # Open the dialog instantly with a loading indicator.
         self.search_field.text = ""
         self.country_list.clear_widgets()
         self.country_list.add_widget(OneLineListItem(text="Loading..."))
         self.country_dialog.open()
 
-        # Defer the heavy list-building to the next frame.
         Clock.schedule_once(lambda dt: self._filter_countries(self.search_field, ""))
 
     def _filter_countries(self, instance, text):
-        """Filters the country list based on user input."""
         self.country_list.clear_widgets()
         countries = self.app.country_service.find_countries(text)
         if not countries:
@@ -76,10 +72,6 @@ class LoginScreen(MDScreen):
             self.ids.country_field.text = country
 
     def on_next_button_press(self):
-        """
-        FIX: Uses `asyncio.run` to correctly start the async operation from
-        the synchronous Kivy environment, preventing the `RuntimeError` crash.
-        """
         try:
             asyncio.run(self.send_code_async())
         except RuntimeError as e:
@@ -91,8 +83,10 @@ class LoginScreen(MDScreen):
         result = await self.app.telegram_service.send_code(phone)
         self.ids.spinner.active = False
 
+        # FIX: Store the phone_code_hash in the app object for the verification screen.
         if result.get("success"):
             self.app.phone_to_verify = phone
+            self.app.phone_code_hash = result["phone_code_hash"]
             self.app.switch_screen('code_verification_screen')
         else:
             self.show_dialog("Login Error", result.get("error", "An unknown error occurred."))

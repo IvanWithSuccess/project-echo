@@ -33,7 +33,9 @@ class NavButton(ButtonBehavior, BoxLayout):
 class ProjectEchoApp(MDApp):
     """The main application class with a custom side navigation."""
 
+    # FIX: Added property to store the hash required for code verification.
     phone_to_verify = StringProperty()
+    phone_code_hash = StringProperty()
 
     telegram_service = ObjectProperty(None)
     country_service = ObjectProperty(None)
@@ -92,7 +94,6 @@ class ProjectEchoApp(MDApp):
             if self.accounts_panel_widget:
                 self.accounts_panel_widget.populate_accounts()
 
-    # FIX: Added a dedicated, robust method to handle screen switching.
     def go_to_login(self, *args):
         """Switches to the login screen."""
         self.switch_screen('login_screen')
