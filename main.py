@@ -80,8 +80,10 @@ class ProjectEchoApp(MDApp):
             )
             self.root.ids.nav_list.add_widget(nav_button)
             
-        self.root.ids.screen_manager.add_widget(LoginScreen())
-        self.root.ids.screen_manager.add_widget(CodeVerificationScreen())
+        # FIX: Explicitly set the `name` for each screen when adding it.
+        # This is what allows the ScreenManager to find them.
+        self.root.ids.screen_manager.add_widget(LoginScreen(name='login_screen'))
+        self.root.ids.screen_manager.add_widget(CodeVerificationScreen(name='code_verification_screen'))
 
         self.root.ids.screen_manager.current = 'dashboard'
 
