@@ -1,80 +1,106 @@
-# =========================================================================
-# >> CUSTOM WIDGET DEFINITIONS
-# =========================================================================
+#:kivy 2.0
+#:import Window kivy.core.window.Window
 
-<NavButton>:
-    orientation: 'vertical'
-    size_hint: None, None
-    size: dp(80), dp(72)
-    padding: [0, dp(12), 0, dp(8)]
-    spacing: dp(4)
-
+<NavButton@Button>:
+    size_hint_y: None
+    height: '48dp'
+    background_color: (0, 0, 0, 0) # Transparent background
+    color: (1, 1, 1, 1) # White text
+    font_size: '16sp'
+    halign: 'left'
+    valign: 'middle'
+    padding_x: '20dp'
+    text_size: self.width - dp(40), self.height
     canvas.before:
         Color:
-            rgba: 0, 0, 0, 0 # Transparent background
+            rgba: (0.3, 0.3, 0.3, 1) if self.state == 'down' else (0.2, 0.2, 0.2, 1)
         Rectangle:
             pos: self.pos
             size: self.size
 
-    # NOTE: Icon is removed as standard Kivy doesn't support it directly.
-
-    Label:
-        text: root.text
-        size_hint_y: None
-        height: self.texture_size[1]
-        font_size: "10sp"
-        halign: 'center'
-
-# =========================================================================
-# >> MAIN LAYOUT KV
-# ==========================================================================
+<ContentPanel>:
+    canvas.before:
+        Color:
+            rgba: (1, 1, 1, 1) # White background
+        Rectangle:
+            pos: self.pos
+            size: self.size
 
 BoxLayout:
     orientation: 'horizontal'
 
-    # Side Navigation Panel
+    # 1. Navigation Panel (Left Side)
     BoxLayout:
+        id: nav_panel
         orientation: 'vertical'
         size_hint_x: None
-        width: dp(80)
-        padding: [dp(4), dp(16), dp(4), 0]
-        spacing: dp(16)
+        width: '250dp'
+        padding: '10dp'
+        spacing: '10dp'
         canvas.before:
             Color:
-                rgba: 0.95, 0.95, 0.95, 1 # Light gray background
+                rgba: (0.2, 0.2, 0.2, 1) # Dark gray background
             Rectangle:
                 pos: self.pos
                 size: self.size
 
         Label:
-            text: "Echo"
-            font_size: '20sp'
+            text: 'Echo'
+            font_size: '24sp'
             bold: True
-            color: 0.2, 0.2, 0.2, 1
-            halign: "center"
             size_hint_y: None
-            height: self.texture_size[1]
+            height: '48dp'
+            color: (1, 1, 1, 1)
 
-        BoxLayout:
-            id: nav_list
-            orientation: 'vertical'
-            size_hint_y: None
-            height: self.minimum_height
-            spacing: dp(8)
+        NavButton:
+            id: dashboard_button
+            text: 'Dashboard'
+            on_release: app.switch_panel('dashboard')
+
+        NavButton:
+            id: accounts_button
+            text: 'Accounts'
+            on_release: app.switch_panel('accounts')
+
+        NavButton:
+            id: campaigns_button
+            text: 'Campaigns'
+            on_release: app.switch_panel('campaigns')
 
         Widget: # Spacer
-            size_hint_y: 1
+            size_hint_y: 1.0
 
-    # Separator
-    Widget:
-        size_hint_x: None
-        width: dp(1)
-        canvas.before:
-            Color:
-                rgba: 0.8, 0.8, 0.8, 1 # Gray color for separator line
-            Rectangle:
-                pos: self.pos
-                size: self.size
+    # 2. Content Panel (Right Side)
+    ContentPanel:
+        id: content_panel
+        
+        # This is where screen manager or other widgets will be added
+        ScreenManager:
+            id: screen_manager
+            transition: NoTransition()
 
-    ScreenManager:
-        id: screen_manager
+            Screen:
+                name: 'dashboard'
+                Label:
+                    text: "Dashboard content here"
+                    color: (0, 0, 0, 1) # Black text
+            
+            Screen:
+                name: 'accounts'
+                AccountsPanel:
+                    id: accounts_panel
+
+            Screen:
+                name: 'login'
+                LoginScreen:
+                    id: login_screen
+
+            Screen:
+                name: 'code_verification'
+                CodeVerificationScreen:
+                    id: code_verification_screen
+
+            Screen:
+                name: 'password_verification'
+                PasswordVerificationScreen:
+                    id: password_verification_screen

@@ -1,57 +1,50 @@
 <LoginScreen>:
+    name: 'login_screen'
 
     BoxLayout:
         orientation: 'vertical'
-        padding: [dp(20), dp(50), dp(20), dp(50)]
-        spacing: dp(30)
+        size_hint: 0.6, None
+        height: self.minimum_height
+        pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+        spacing: '20dp'
 
         Label:
             text: "Sign in to Project Echo"
-            halign: 'center'
             font_size: '24sp'
             bold: True
+            color: (0, 0, 0, 1)
             size_hint_y: None
             height: self.texture_size[1]
 
-        BoxLayout:
-            orientation: 'vertical'
-            spacing: dp(20)
+        # Custom Dropdown-like button for country selection
+        Button:
+            id: country_button
+            text: root.selected_country_name or 'Choose a Country'
             size_hint_y: None
-            height: self.minimum_height
+            height: '48dp'
+            background_color: (0.9, 0.9, 0.9, 1)
+            color: (0, 0, 0, 1)
+            on_release: root.open_country_popup()
 
-            TextInput:
-                id: country_field
-                hint_text: "Country"
-                readonly: True
-                multiline: False
-                on_focus: if self.focus: root.open_country_dialog()
-                size_hint_y: None
-                height: dp(48)
-
-            TextInput:
-                id: phone_field
-                hint_text: "Phone Number"
-                helper_text: "Include your country code (e.g., +1)"
-                multiline: False
-                size_hint_y: None
-                height: dp(48)
-
-        BoxLayout:
-            orientation: 'vertical'
+        TextInput:
+            id: phone_field
+            hint_text: "Phone Number"
+            multiline: False
             size_hint_y: None
-            height: self.minimum_height
-            spacing: dp(10)
+            height: '48dp'
 
-            Button:
-                text: "NEXT"
-                on_release: root.on_next_button_press()
-                size_hint_y: None
-                height: dp(48)
-                pos_hint: {'center_x': 0.5}
+        Button:
+            id: next_button
+            text: "NEXT"
+            size_hint_y: None
+            height: '48dp'
+            background_color: (0.1, 0.4, 0.8, 1) # Blue color
+            color: (1, 1, 1, 1)
+            on_release: root.send_code()
 
-            Spinner:
-                id: spinner
-                size_hint: None, None
-                size: dp(46), dp(46)
-                pos_hint: {'center_x': 0.5}
-                active: False
+        Spinner:
+            id: spinner
+            size_hint: None, None
+            size: dp(46), dp(46)
+            pos_hint: {'center_x': 0.5}
+            active: False
