@@ -1,64 +1,49 @@
 <LoginScreen>:
-    MDBoxLayout:
-        orientation: 'vertical'
-        spacing: dp(20)
-        padding: dp(20)
+    MDFloatLayout:
 
-        # Header with back arrow
-        MDBoxLayout:
-            size_hint_y: None
-            height: self.minimum_height
-            MDIconButton:
-                icon: "arrow-left"
-                on_release: app.switch_screen('accounts')
-            MDLabel:
-                text: "" # Spacer
+        # FIX: Back arrow is now fixed to the top-left corner for consistency.
+        MDIconButton:
+            icon: "arrow-left"
+            pos_hint: {"top": 0.98, "x": 0.02}
+            on_release: app.switch_screen('accounts')
 
-        # Main content centered
+        # FIX: The entire form is now in a single box, perfectly centered.
         MDBoxLayout:
             orientation: 'vertical'
-            adaptive_height: True
-            pos_hint: {'center_y': 0.5}
+            adaptive_size: True
+            width: "400dp"  # Increased width for better text display
+            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+            spacing: "20dp"
 
-            # FIX: The form content is now in a box with a fixed width
-            # and centered horizontally, making it much wider and usable.
-            MDBoxLayout:
-                id: form_box
-                orientation: 'vertical'
-                size_hint_x: None
-                width: dp(360) # Increased width as requested
+            MDLabel:
+                text: "Sign in to Telegram"
+                font_style: "H4"
+                halign: 'center'
+                adaptive_height: True
+
+            MDLabel:
+                text: "Choose your country and enter your phone number."
+                halign: 'center'
+                adaptive_height: True
+                theme_text_color: "Secondary"
+
+            MDTextField:
+                id: country_field
+                hint_text: "Country"
+                on_focus: if self.focus: root.open_country_dialog()
+
+            MDTextField:
+                id: phone_field
+                hint_text: "Phone Number"
+
+            MDRaisedButton:
+                text: "NEXT"
                 pos_hint: {'center_x': 0.5}
-                spacing: dp(20)
+                on_press: root.on_next_button_press()
 
-                MDLabel:
-                    text: "Sign in to Telegram"
-                    font_style: "H4"
-                    halign: 'center'
-                    adaptive_height: True
-
-                MDLabel:
-                    text: "Choose your country and enter your phone number."
-                    halign: 'center'
-                    adaptive_height: True
-                    theme_text_color: "Secondary"
-
-                MDTextField:
-                    id: country_field
-                    hint_text: "Country"
-                    on_focus: if self.focus: root.open_country_dialog()
-
-                MDTextField:
-                    id: phone_field
-                    hint_text: "Phone Number"
-
-                MDRaisedButton:
-                    text: "NEXT"
-                    pos_hint: {'center_x': 0.5}
-                    on_press: root.on_next_button_press()
-
-                MDSpinner:
-                    id: spinner
-                    size_hint: None, None
-                    size: dp(46), dp(46)
-                    pos_hint: {'center_x': 0.5}
-                    active: False
+            MDSpinner:
+                id: spinner
+                size_hint: None, None
+                size: dp(46), dp(46)
+                pos_hint: {'center_x': 0.5}
+                active: False

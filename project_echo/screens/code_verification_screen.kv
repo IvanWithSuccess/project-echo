@@ -8,11 +8,12 @@
             pos_hint: {"top": 0.98, "x": 0.02}
             on_release: app.root.ids.screen_manager.current = 'login_screen'
 
+        # FIX: Centered the box vertically and increased its width.
         MDBoxLayout:
             orientation: 'vertical'
             adaptive_size: True
-            width: "300dp"
-            pos_hint: {'center_x': 0.5, 'center_y': 0.65}
+            width: "400dp" # Increased width to match login screen
+            pos_hint: {'center_x': 0.5, 'center_y': 0.5} # Centered properly
             spacing: "20dp"
 
             MDLabel:
@@ -21,8 +22,6 @@
                 font_style: 'H5'
                 adaptive_height: True
 
-            # FINAL, DECLARATIVE FIX: The label's text is now directly bound
-            # to the app's 'phone_to_verify' property. This is the correct Kivy way.
             MDLabel:
                 id: info_label
                 text: f"Enter the code sent to {app.phone_to_verify}"
@@ -33,19 +32,19 @@
             MDTextField:
                 id: code_field
                 hint_text: "Confirmation Code"
-                halign: "center"
+                halign: "center" # Text inside field will be centered
 
             MDTextField:
                 id: password_field
                 hint_text: "2FA Password (if any)"
                 password: True
-                halign: "center"
+                halign: "center" # Text inside field will be centered
                 disabled: True
 
-            MDFillRoundFlatButton:
+            # FIX: Changed to MDRaisedButton for consistency.
+            MDRaisedButton:
                 text: "CONFIRM"
                 pos_hint: {'center_x': 0.5}
-                padding: "12dp"
                 on_release: root.verify_code()
 
         MDSpinner:

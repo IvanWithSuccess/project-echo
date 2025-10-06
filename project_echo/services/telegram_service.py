@@ -2,7 +2,7 @@ import asyncio
 import os
 from telethon.sync import TelegramClient
 from telethon.sessions import StringSession
-from telethon.errors import SessionPasswordNeededError
+from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError, PasswordHashInvalidError
 
 from project_echo.config import API_ID, API_HASH
 
@@ -16,15 +16,18 @@ class TelegramService:
         self.clients = {}
 
     async def _get_client(self, phone):
+        """Gets a client, ensuring it's stored per phone number."""
         if phone not in self.clients:
             session_path = os.path.join(self.sessions_dir, f"{phone}.session")
             self.clients[phone] = TelegramClient(session_path, API_ID, API_HASH)
         return self.clients[phone]
 
     async def send_code(self, phone):
+        """Sends a verification code to the user's phone."""
         client = await self._get_client(phone)
         try:
-            await client.connect()
+            if not client.is_connected():
+                await client.connect()
             if not await client.is_user_authorized():
                 result = await client.send_code_request(phone)
                 return {"success": True, "phone_code_hash": result.phone_code_hash}
@@ -38,32 +41,43 @@ class TelegramService:
 
     async def verify_code(self, phone, code, phone_code_hash, password=None):
         """
-        FIX: Handles 2FA (password) correctly by catching SessionPasswordNeededError
-        and retrying the sign-in with the provided password.
+        FIXED: Correctly handles the 2FA flow by managing the client connection state.
+        The client is no longer disconnected prematurely while waiting for a password.
         """
         client = await self._get_client(phone)
         try:
-            await client.connect()
-            await client.sign_in(phone=phone, code=code, phone_code_hash=phone_code_hash)
+            if not client.is_connected():
+                await client.connect()
 
-            session_string = client.session.save()
-            # The session file is already saved by the client, but the string can be stored elsewhere.
-            return {"success": True, "session_string": session_string}
+            # If no password is given, this is the first attempt.
+            if not password:
+                try:
+                    await client.sign_in(phone=phone, code=code, phone_code_hash=phone_code_hash)
+                except SessionPasswordNeededError:
+                    # Correctly signal the UI that a password is needed. DO NOT DISCONNECT.
+                    hint = await client.get_password_hint()
+                    return {"password_needed": True, "hint": hint}
 
-        except SessionPasswordNeededError as e:
+            # If a password is provided, try to sign in with it.
             if password:
                 try:
                     await client.sign_in(password=password)
-                    session_string = client.session.save()
-                    return {"success": True, "session_string": session_string}
-                except Exception as e_pass:
-                    return {"success": False, "error": str(e_pass)}
+                except PasswordHashInvalidError:
+                    return {"success": False, "error": "Invalid password. Please try again."}
+
+            # If we are here, we should be logged in.
+            if await client.is_user_authorized():
+                session_string = client.session.save()
+                await client.disconnect() # Disconnect only on final success.
+                return {"success": True, "session_string": session_string}
             else:
-                # The UI needs to ask for the password. We can pass the hint along.
-                hint = await client.get_password_hint()
-                return {"success": False, "password_needed": True, "hint": hint}
+                # This path should not be hit with correct logic, but acts as a fallback.
+                return {"success": False, "error": "An unknown authorization error occurred."}
+
+        except PhoneCodeInvalidError:
+            await client.disconnect() # Disconnect on definitive failure.
+            return {"success": False, "error": "The confirmation code is invalid."}
         except Exception as e:
-            return {"success": False, "error": str(e)}
-        finally:
             if client.is_connected():
-                await client.disconnect()
+                await client.disconnect() # Disconnect on any other exception.
+            return {"success": False, "error": str(e)}
