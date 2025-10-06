@@ -1,14 +1,24 @@
 <LoginScreen>:
     name: "login_screen"
 
-    MDFloatLayout:
+    # FIX: Use MDAnchorLayout to properly center the content
+    MDAnchorLayout:
+        anchor_x: 'center'
+        anchor_y: 'center'
+
         MDBoxLayout:
             orientation: 'vertical'
-            size_hint_x: None
+            size_hint: None, None # Let the content decide its size
+            adaptive_height: True
             width: "500dp"
-            adaptive_height: True  # FIX: Make the layout height fit its content
-            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
             spacing: "20dp"
+
+            # FIX: Added a top layout to hold the back arrow
+            MDFloatLayout:
+                MDIconButton:
+                    icon: "arrow-left"
+                    pos_hint: {"top": 1, "x": 0} # Positioned top-left
+                    on_release: app.root.ids.screen_manager.current = 'accounts'
 
             MDLabel:
                 text: "Sign in to Telegram"
@@ -39,9 +49,9 @@
                 pos_hint: {'center_x': 0.5}
                 on_release: root.on_next_button_press()
 
-        MDSpinner:
-            id: spinner
-            size_hint: None, None
-            size: dp(46), dp(46)
-            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-            active: False
+    MDSpinner:
+        id: spinner
+        size_hint: None, None
+        size: dp(46), dp(46)
+        pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+        active: False

@@ -3,6 +3,7 @@ import os
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError, PasswordHashInvalidError
+from telethon.tl import functions
 
 from project_echo.config import API_ID, API_HASH
 
@@ -51,12 +52,13 @@ class TelegramService:
             if not password:
                 try:
                     await client.sign_in(phone=phone, code=code, phone_code_hash=phone_code_hash)
-                # FIX: Correctly get hint from the exception object itself.
-                except SessionPasswordNeededError as e:
+                except SessionPasswordNeededError:
+                    # FIX: Make a separate request to get password info (including hint)
+                    password_info = await client(functions.account.GetPasswordRequest())
                     updated_session_string = client.session.save()
                     return {
                         "password_needed": True,
-                        "hint": e.hint, # Correct way to get the hint
+                        "hint": password_info.hint,
                         "session_string": updated_session_string
                     }
 
@@ -75,7 +77,8 @@ class TelegramService:
         except PhoneCodeInvalidError:
             return {"success": False, "error": "The confirmation code is invalid."}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            # Return the actual error to the UI for better debugging
+            return {"success": False, "error": f"{type(e).__name__}: {e}"}
         finally:
             if client.is_connected():
                 await client.disconnect()
