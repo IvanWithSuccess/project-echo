@@ -2,14 +2,27 @@
 #:import Window kivy.core.window.Window
 #:import NoTransition kivy.uix.screenmanager.NoTransition
 
-# More robust way to create an icon button
-# We combine ButtonBehavior (for on_release events) with an Image.
-<NavButton@ButtonBehavior+Image>:
+# A more advanced NavButton that contains a sized Image
+<NavButton@FloatLayout>:
     size_hint_y: None
-    height: '60dp'
-    # Keep the aspect ratio of the image
-    keep_ratio: True
-    allow_stretch: True
+    height: '50dp' # Reduced button height
+    source: ''      # Property for the icon path
+    panel_name: '' # Property for the panel to switch to
+
+    # The behavior that makes the layout clickable
+    ButtonBehavior:
+        # When released, call the app's switch_panel method with the correct panel name
+        on_release: app.switch_panel(root.panel_name)
+
+    # The actual icon image
+    Image:
+        source: root.source # Link to the source property of the NavButton
+        size_hint: None, None
+        # Set a fixed size for the icon, e.g., 28x28 pixels
+        # This is about 3-4 times smaller than the previous 60dp.
+        size: (dp(28), dp(28))
+        # Center the image inside the FloatLayout
+        pos_hint: {'center_x': 0.5, 'center_y': 0.5}
 
 # --- The ONE Root Widget ---
 BoxLayout:
@@ -22,7 +35,7 @@ BoxLayout:
         size_hint_x: None
         width: '80dp'
         padding: '10dp'
-        spacing: '10dp'
+        spacing: '15dp' # Increased spacing a bit
         canvas.before:
             Color:
                 rgba: (0.95, 0.95, 0.95, 1)
@@ -38,21 +51,18 @@ BoxLayout:
             height: '48dp'
             color: (0, 0, 0, 1)
 
-        # Use the new NavButton definition with the 'source' property
+        # Use the new NavButton with source and panel_name properties
         NavButton:
-            id: dashboard_button
+            panel_name: 'dashboard'
             source: 'assets/icons/dashboard.png'
-            on_release: app.switch_panel('dashboard')
 
         NavButton:
-            id: accounts_button
+            panel_name: 'accounts'
             source: 'assets/icons/accounts.png'
-            on_release: app.switch_panel('accounts')
 
         NavButton:
-            id: campaigns_button
+            panel_name: 'campaigns'
             source: 'assets/icons/campaigns.png'
-            on_release: app.switch_panel('campaigns')
 
         Widget: # Spacer
             size_hint_y: 1.0
