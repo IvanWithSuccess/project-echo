@@ -1,17 +1,16 @@
 <LoginScreen>:
     MDFloatLayout:
 
-        # FIX: Back arrow is now fixed to the top-left corner for consistency.
         MDIconButton:
             icon: "arrow-left"
             pos_hint: {"top": 0.98, "x": 0.02}
             on_release: app.switch_screen('accounts')
 
-        # FIX: The entire form is now in a single box, perfectly centered.
         MDBoxLayout:
             orientation: 'vertical'
             adaptive_size: True
-            width: "400dp"  # Increased width for better text display
+            # FIX: Increased width to prevent text wrapping and make the form look better.
+            width: "500dp"
             pos_hint: {'center_x': 0.5, 'center_y': 0.5}
             spacing: "20dp"
 

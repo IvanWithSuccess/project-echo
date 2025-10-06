@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from functools import partial
 
 from kivy.clock import Clock
@@ -14,7 +15,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 
 
 class LoginScreen(MDScreen):
-    """The login screen, refactored for performance and stability."""
+    """The login screen, refactored to handle asyncio in a separate thread."""
 
     country_dialog = ObjectProperty(None)
     search_field = ObjectProperty(None)
@@ -25,10 +26,6 @@ class LoginScreen(MDScreen):
         self.ids.phone_field.bind(text=self.sync_country_from_phone)
 
     def open_country_dialog(self):
-        """
-        Opens the dialog instantly and populates the list asynchronously
-        to prevent the UI from hanging or feeling laggy.
-        """
         if not self.country_dialog:
             self.search_field = MDTextField(hint_text="Search country...", mode="fill")
             self.search_field.bind(text=self._filter_countries)
@@ -43,7 +40,6 @@ class LoginScreen(MDScreen):
         self.country_list.clear_widgets()
         self.country_list.add_widget(OneLineListItem(text="Loading..."))
         self.country_dialog.open()
-
         Clock.schedule_once(lambda dt: self._filter_countries(self.search_field, ""))
 
     def _filter_countries(self, instance, text):
@@ -51,7 +47,6 @@ class LoginScreen(MDScreen):
         countries = self.app.country_service.find_countries(text)
         if not countries:
             self.country_list.add_widget(OneLineListItem(text="No countries found"))
-
         for country_name in countries:
             code = self.app.country_service.get_code_by_country(country_name)
             item = OneLineListItem(
@@ -72,20 +67,28 @@ class LoginScreen(MDScreen):
             self.ids.country_field.text = country
 
     def on_next_button_press(self):
+        """FIX: Runs the async operation in a separate thread."""
+        self.ids.spinner.active = True
+        threading.Thread(target=self.run_async_send_code, daemon=True).start()
+
+    def run_async_send_code(self):
+        """Helper that runs the asyncio event loop in the thread."""
         try:
-            asyncio.run(self.send_code_async())
-        except RuntimeError as e:
-            print(f"Ignoring nested asyncio loop error: {e}")
+            result = asyncio.run(self.send_code_async())
+        except Exception as e:
+            result = {"success": False, "error": str(e)}
+        Clock.schedule_once(lambda dt: self.process_send_code_result(result))
 
     async def send_code_async(self):
-        self.ids.spinner.active = True
+        """The actual async logic for sending the code."""
         phone = self.ids.phone_field.text
-        result = await self.app.telegram_service.send_code(phone)
-        self.ids.spinner.active = False
+        return await self.app.telegram_service.send_code(phone)
 
-        # FIX: Store the phone_code_hash in the app object for the verification screen.
+    def process_send_code_result(self, result):
+        """Updates the UI on the main thread after the async call."""
+        self.ids.spinner.active = False
         if result.get("success"):
-            self.app.phone_to_verify = phone
+            self.app.phone_to_verify = self.ids.phone_field.text
             self.app.phone_code_hash = result["phone_code_hash"]
             self.app.switch_screen('code_verification_screen')
         else:
