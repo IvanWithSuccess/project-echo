@@ -13,6 +13,8 @@ from kivy.uix.behaviors import ButtonBehavior
 from project_echo.screens.accounts_screen import AccountsPanel
 from project_echo.screens.login_screen import LoginScreen
 from project_echo.screens.code_verification_screen import CodeVerificationScreen
+# FIX: Import the missing PasswordVerificationScreen class
+from project_echo.screens.password_verification_screen import PasswordVerificationScreen
 from project_echo.services.telegram_service import TelegramService
 from project_echo.services.country_service import CountryService
 
@@ -20,6 +22,8 @@ from project_echo.services.country_service import CountryService
 Builder.load_file("project_echo/screens/accounts_screen.kv")
 Builder.load_file("project_echo/screens/login_screen.kv")
 Builder.load_file("project_echo/screens/code_verification_screen.kv")
+# FIX: Load the missing KV file for the password screen
+Builder.load_file("project_echo/screens/password_verification_screen.kv")
 
 
 class NavButton(ButtonBehavior, BoxLayout):
@@ -28,13 +32,14 @@ class NavButton(ButtonBehavior, BoxLayout):
 
 # =========================================================================
 # >> MAIN APP CLASS
-# ==========================================================================
+# =========================================================================
 
 class ProjectEchoApp(MDApp):
     """The main application class with a custom side navigation."""
 
     phone_to_verify = StringProperty()
     phone_code_hash = StringProperty()
+    session_string_for_password = StringProperty()
 
     telegram_service = ObjectProperty(None)
     country_service = ObjectProperty(None)
@@ -76,13 +81,11 @@ class ProjectEchoApp(MDApp):
             )
             self.root.ids.nav_list.add_widget(nav_button)
             
-        login_screen = LoginScreen()
-        login_screen.name = 'login_screen'
-        self.root.ids.screen_manager.add_widget(login_screen)
-
-        code_screen = CodeVerificationScreen()
-        code_screen.name = 'code_verification_screen'
-        self.root.ids.screen_manager.add_widget(code_screen)
+        # Add all login-flow screens to the ScreenManager
+        self.root.ids.screen_manager.add_widget(LoginScreen(name='login_screen'))
+        self.root.ids.screen_manager.add_widget(CodeVerificationScreen(name='code_verification_screen'))
+        # FIX: Add the password verification screen to the manager
+        self.root.ids.screen_manager.add_widget(PasswordVerificationScreen(name='password_verification_screen'))
 
         self.root.ids.screen_manager.current = 'dashboard'
 
