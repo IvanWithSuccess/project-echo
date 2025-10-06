@@ -6,17 +6,14 @@
 <NavButton@Button>:
     size_hint_y: None
     height: '60dp'
-    background_color: (0.95, 0.95, 0.95, 1) # Light gray background
-    color: (0, 0, 0, 1) # Black text
-    font_size: '20sp'
-    # Center the icon/text
-    halign: 'center'
-    valign: 'middle'
-    padding_x: 0
-    text_size: self.width, self.height
-    # Change background on press
+    # Make background transparent to show the icon image
+    background_color: (0, 0, 0, 0)
+    # Remove the default button border
+    border: (0, 0, 0, 0)
+    # Set the normal background to be empty, so it can be defined in the instance
     background_normal: ''
-    background_down: 'atlas://data/images/defaulttheme/button_pressed'
+    # Use a slightly darker background on press for visual feedback
+    background_down: ''
 
 # --- The ONE Root Widget ---
 BoxLayout:
@@ -47,17 +44,20 @@ BoxLayout:
 
         NavButton:
             id: dashboard_button
-            text: 'D' # Placeholder for Dashboard Icon
+            background_normal: 'assets/icons/dashboard.png'
+            background_down: 'assets/icons/dashboard.png' # Use same image for pressed state
             on_release: app.switch_panel('dashboard')
 
         NavButton:
             id: accounts_button
-            text: 'A' # Placeholder for Accounts Icon
+            background_normal: 'assets/icons/accounts.png'
+            background_down: 'assets/icons/accounts.png'
             on_release: app.switch_panel('accounts')
 
         NavButton:
             id: campaigns_button
-            text: 'C' # Placeholder for Campaigns Icon
+            background_normal: 'assets/icons/campaigns.png'
+            background_down: 'assets/icons/campaigns.png'
             on_release: app.switch_panel('campaigns')
 
         Widget: # Spacer
