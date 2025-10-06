@@ -1,23 +1,18 @@
 <LoginScreen>:
+    name: "login_screen"
+
     MDFloatLayout:
-
-        MDIconButton:
-            icon: "arrow-left"
-            pos_hint: {"top": 0.98, "x": 0.02}
-            on_release: app.switch_screen('accounts')
-
         MDBoxLayout:
             orientation: 'vertical'
             adaptive_size: True
-            # FIX: Increased width to prevent text wrapping and make the form look better.
-            width: "500dp"
+            width: 500dp  # FIX: Removed quotes for correct dp interpretation
             pos_hint: {'center_x': 0.5, 'center_y': 0.5}
             spacing: "20dp"
 
             MDLabel:
                 text: "Sign in to Telegram"
-                font_style: "H4"
                 halign: 'center'
+                font_style: 'H4'
                 adaptive_height: True
 
             MDLabel:
@@ -29,20 +24,23 @@
             MDTextField:
                 id: country_field
                 hint_text: "Country"
+                readonly: True
                 on_focus: if self.focus: root.open_country_dialog()
 
             MDTextField:
                 id: phone_field
                 hint_text: "Phone Number"
+                helper_text: "Include your country code (e.g., +1 for USA)"
+                helper_text_mode: "on_focus"
 
             MDRaisedButton:
                 text: "NEXT"
                 pos_hint: {'center_x': 0.5}
-                on_press: root.on_next_button_press()
+                on_release: root.on_next_button_press()
 
-            MDSpinner:
-                id: spinner
-                size_hint: None, None
-                size: dp(46), dp(46)
-                pos_hint: {'center_x': 0.5}
-                active: False
+        MDSpinner:
+            id: spinner
+            size_hint: None, None
+            size: dp(46), dp(46)
+            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+            active: False

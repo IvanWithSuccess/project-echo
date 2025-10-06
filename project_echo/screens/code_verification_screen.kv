@@ -11,7 +11,7 @@
         MDBoxLayout:
             orientation: 'vertical'
             adaptive_size: True
-            width: "500dp"
+            width: 500dp  # FIX: Removed quotes for correct dp interpretation
             pos_hint: {'center_x': 0.5, 'center_y': 0.5}
             spacing: "20dp"
 
@@ -32,9 +32,6 @@
                 id: code_field
                 hint_text: "Confirmation Code"
                 halign: "center"
-
-            # FIX: Removed the 2FA password field from this screen.
-            # It will be moved to its own dedicated screen.
 
             MDRaisedButton:
                 text: "CONFIRM"

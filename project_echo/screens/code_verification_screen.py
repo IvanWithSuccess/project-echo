@@ -7,26 +7,25 @@ from kivymd.uix.button import MDFlatButton
 from kivymd.uix.screen import MDScreen
 from project_echo.screens.password_verification_screen import PasswordVerificationScreen
 
+
 class CodeVerificationScreen(MDScreen):
-    """Handles the code verification and transitions to the password screen if needed."""
+    """Handles code verification using the new stateless service."""
 
     def on_pre_enter(self, *args):
         self.app = MDApp.get_running_app()
-        # Ensure the password screen is registered
         if not self.app.root.ids.screen_manager.has_screen('password_verification_screen'):
             self.app.root.ids.screen_manager.add_widget(PasswordVerificationScreen())
 
         self.ids.code_field.text = ""
         self.ids.spinner.active = False
         self.ids.code_field.focus = True
+        self.ids.info_label.text = f"Enter the code sent to {self.app.phone_to_verify}"
 
     def verify_code(self):
-        """Runs the async verification in a separate thread."""
         self.ids.spinner.active = True
         threading.Thread(target=self.run_async_verification, daemon=True).start()
 
     def run_async_verification(self):
-        """Helper that runs the asyncio event loop in the thread."""
         try:
             result = asyncio.run(self.verify_code_async())
         except Exception as e:
@@ -34,9 +33,9 @@ class CodeVerificationScreen(MDScreen):
         Clock.schedule_once(lambda dt: self.process_verification_result(result))
 
     async def verify_code_async(self):
-        """The actual async logic for verification."""
         code = self.ids.code_field.text
         return await self.app.telegram_service.verify_code(
+            session_string=self.app.session_string,
             phone=self.app.phone_to_verify,
             code=code,
             phone_code_hash=self.app.phone_code_hash,
@@ -44,14 +43,16 @@ class CodeVerificationScreen(MDScreen):
         )
 
     def process_verification_result(self, result):
-        """Updates the UI based on the verification result."""
         self.ids.spinner.active = False
 
         if result.get("success"):
+            # Final session string after successful login
+            self.app.save_session(self.app.phone_to_verify, result["session_string"])
             self.show_dialog("Success!", "You have successfully logged in.")
             self.app.switch_screen('accounts')
         elif result.get("password_needed"):
-            # FIX: Instead of enabling a field, switch to the dedicated password screen.
+            # IMPORTANT: Update the session string before switching screens
+            self.app.session_string = result["session_string"]
             self.app.password_hint = result.get("hint", "")
             self.app.switch_screen('password_verification_screen')
         else:
@@ -59,13 +60,8 @@ class CodeVerificationScreen(MDScreen):
             self.show_dialog("Verification Failed", error_message)
 
     def show_dialog(self, title, text):
-        if not hasattr(self, 'dialog') or not self.dialog:
-            self.dialog = MDDialog(
-                title=title,
-                text=text,
-                buttons=[MDFlatButton(text="OK", on_release=lambda *args: self.dialog.dismiss())],
-            )
-        else:
-            self.dialog.title = title
-            self.dialog.text = text
-        self.dialog.open()
+        dialog = MDDialog(
+            title=title, text=text,
+            buttons=[MDFlatButton(text="OK", on_release=lambda *args: dialog.dismiss())]
+        )
+        dialog.open()

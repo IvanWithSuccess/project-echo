@@ -15,7 +15,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 
 
 class LoginScreen(MDScreen):
-    """The login screen, refactored to handle asyncio in a separate thread."""
+    """The login screen, refactored to handle the new stateless Telegram service."""
 
     country_dialog = ObjectProperty(None)
     search_field = ObjectProperty(None)
@@ -67,12 +67,10 @@ class LoginScreen(MDScreen):
             self.ids.country_field.text = country
 
     def on_next_button_press(self):
-        """FIX: Runs the async operation in a separate thread."""
         self.ids.spinner.active = True
         threading.Thread(target=self.run_async_send_code, daemon=True).start()
 
     def run_async_send_code(self):
-        """Helper that runs the asyncio event loop in the thread."""
         try:
             result = asyncio.run(self.send_code_async())
         except Exception as e:
@@ -80,16 +78,16 @@ class LoginScreen(MDScreen):
         Clock.schedule_once(lambda dt: self.process_send_code_result(result))
 
     async def send_code_async(self):
-        """The actual async logic for sending the code."""
         phone = self.ids.phone_field.text
         return await self.app.telegram_service.send_code(phone)
 
     def process_send_code_result(self, result):
-        """Updates the UI on the main thread after the async call."""
         self.ids.spinner.active = False
         if result.get("success"):
+            # Store all necessary state in the app object for the next screen
             self.app.phone_to_verify = self.ids.phone_field.text
             self.app.phone_code_hash = result["phone_code_hash"]
+            self.app.session_string = result["session_string"] # CRITICAL: Store the session string
             self.app.switch_screen('code_verification_screen')
         else:
             self.show_dialog("Login Error", result.get("error", "An unknown error occurred."))

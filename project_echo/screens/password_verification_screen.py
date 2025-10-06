@@ -8,7 +8,7 @@ from kivymd.uix.screen import MDScreen
 
 
 class PasswordVerificationScreen(MDScreen):
-    """Handles the 2FA password entry for Telegram login."""
+    """Handles 2FA password entry using the new stateless service."""
 
     def on_pre_enter(self, *args):
         self.app = MDApp.get_running_app()
@@ -19,12 +19,10 @@ class PasswordVerificationScreen(MDScreen):
         self.ids.info_label.text = f"Your account is protected. Please enter your password.\nHint: {hint}"
 
     def verify_password(self):
-        """Runs the async verification in a separate thread."""
         self.ids.spinner.active = True
         threading.Thread(target=self.run_async_verification, daemon=True).start()
 
     def run_async_verification(self):
-        """Helper that runs the asyncio event loop in the thread."""
         try:
             result = asyncio.run(self.verify_password_async())
         except Exception as e:
@@ -32,20 +30,21 @@ class PasswordVerificationScreen(MDScreen):
         Clock.schedule_once(lambda dt: self.process_verification_result(result))
 
     async def verify_password_async(self):
-        """The actual async logic for password verification."""
         password = self.ids.password_field.text
-        # We reuse the existing client session from the previous step
+        # Use the session string passed from the previous screen
         return await self.app.telegram_service.verify_code(
-            phone=self.app.phone_to_verify,
+            session_string=self.app.session_string,
+            phone=self.app.phone_to_verify, # Keep passing phone for context if needed
             code=None,  # Not needed for this step
-            phone_code_hash=None, # Not needed for this step
+            phone_code_hash=self.app.phone_code_hash, # Keep passing hash
             password=password
         )
 
     def process_verification_result(self, result):
-        """Updates the UI based on the verification result."""
         self.ids.spinner.active = False
         if result.get("success"):
+            # Final session string after successful login
+            self.app.save_session(self.app.phone_to_verify, result["session_string"])
             self.show_dialog("Success!", "You have successfully logged in.")
             self.app.switch_screen('accounts')
         else:
@@ -53,13 +52,8 @@ class PasswordVerificationScreen(MDScreen):
             self.show_dialog("Verification Failed", error_message)
 
     def show_dialog(self, title, text):
-        if not hasattr(self, 'dialog') or not self.dialog:
-            self.dialog = MDDialog(
-                title=title,
-                text=text,
-                buttons=[MDFlatButton(text="OK", on_release=lambda *args: self.dialog.dismiss())],
-            )
-        else:
-            self.dialog.title = title
-            self.dialog.text = text
-        self.dialog.open()
+        dialog = MDDialog(
+            title=title, text=text,
+            buttons=[MDFlatButton(text="OK", on_release=lambda *args: dialog.dismiss())]
+        )
+        dialog.open()
