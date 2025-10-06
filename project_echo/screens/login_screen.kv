@@ -1,5 +1,4 @@
 <LoginScreen>:
-    # md_bg_color: self.theme_cls.bg_color  <- FIX: Removed this line
 
     MDBoxLayout:
         orientation: 'vertical'
@@ -9,7 +8,8 @@
         MDLabel:
             text: "Sign in to Project Echo"
             halign: 'center'
-            font_style: 'Headline.5'
+            # FIX: Changed font_style to a valid value for KivyMD 1.2.0
+            font_style: 'H5'
             adaptive_height: True
 
         MDBoxLayout:
@@ -37,7 +37,6 @@
             MDRaisedButton:
                 text: "NEXT"
                 on_release: root.on_next_button_press()
-                # FIX: Correct way to set button color for KivyMD 1.2.0
                 md_bg_color: app.theme_cls.primary_color
                 pos_hint: {'center_x': 0.5}
 
