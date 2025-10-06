@@ -1,59 +1,61 @@
-import asyncio
-import threading
+from kivy.uix.screenmanager import Screen
 from kivy.clock import Clock
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
-from kivymd.uix.screen import MDScreen
+import asyncio
 
-
-class PasswordVerificationScreen(MDScreen):
-    """Handles 2FA password entry using the new stateless service."""
-
-    def on_pre_enter(self, *args):
+class PasswordVerificationScreen(Screen):
+    """
+    Screen for entering the two-factor authentication password.
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.app = MDApp.get_running_app()
-        self.ids.password_field.text = ""
+        self.dialog = None
+
+    def on_enter(self, *args):
         self.ids.spinner.active = False
-        self.ids.password_field.focus = True
-        hint = self.app.password_hint or "Password"
-        self.ids.info_label.text = f"Your account is protected. Please enter your password.\nHint: {hint}"
+        self.ids.password_field.text = ""
 
     def verify_password(self):
-        self.ids.spinner.active = True
-        threading.Thread(target=self.run_async_verification, daemon=True).start()
-
-    def run_async_verification(self):
-        try:
-            result = asyncio.run(self.verify_password_async())
-        except Exception as e:
-            result = {"success": False, "error": str(e)}
-        Clock.schedule_once(lambda dt: self.process_verification_result(result))
-
-    async def verify_password_async(self):
         password = self.ids.password_field.text
-        # Use the session string passed from the previous screen
-        return await self.app.telegram_service.verify_code(
-            session_string=self.app.session_string,
-            phone=self.app.phone_to_verify, # Keep passing phone for context if needed
-            code=None,  # Not needed for this step
-            phone_code_hash=self.app.phone_code_hash, # Keep passing hash
+        if not password:
+            self.show_error_dialog("Please enter your password.")
+            return
+
+        self.ids.spinner.active = True
+        asyncio.create_task(self.async_verify_password(password))
+
+    async def async_verify_password(self, password):
+        result = await self.app.telegram_service.verify_code(
+            session_string=self.app.session_string_for_password,
+            phone=self.app.phone_to_verify,
+            code=None,  # No code needed at this stage
+            phone_code_hash=self.app.phone_code_hash,
             password=password
         )
+        Clock.schedule_once(lambda dt: self.process_verification_result(result))
 
     def process_verification_result(self, result):
         self.ids.spinner.active = False
         if result.get("success"):
-            # Final session string after successful login
+            # FIX: Call the correct save_session method on the app instance
             self.app.save_session(self.app.phone_to_verify, result["session_string"])
-            self.show_dialog("Success!", "You have successfully logged in.")
-            self.app.switch_screen('accounts')
         else:
             error_message = result.get("error", "An unknown error occurred.")
-            self.show_dialog("Verification Failed", error_message)
+            self.show_error_dialog(error_message)
 
-    def show_dialog(self, title, text):
-        dialog = MDDialog(
-            title=title, text=text,
-            buttons=[MDFlatButton(text="OK", on_release=lambda *args: dialog.dismiss())]
-        )
-        dialog.open()
+    def show_error_dialog(self, text):
+        if not self.dialog:
+            self.dialog = MDDialog(
+                title="Authentication Failed",
+                text=text,
+                buttons=[
+                    MDFlatButton(
+                        text="OK", on_release=lambda x: self.dialog.dismiss()
+                    ),
+                ],
+            )
+        self.dialog.text = text
+        self.dialog.open()

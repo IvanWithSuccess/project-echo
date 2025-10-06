@@ -1,4 +1,5 @@
 
+import os # FIX: Added os import for file path operations
 from kivy.lang import Builder
 from kivy.core.window import Window
 from kivymd.app import MDApp
@@ -13,7 +14,6 @@ from kivy.uix.behaviors import ButtonBehavior
 from project_echo.screens.accounts_screen import AccountsPanel
 from project_echo.screens.login_screen import LoginScreen
 from project_echo.screens.code_verification_screen import CodeVerificationScreen
-# FIX: Import the missing PasswordVerificationScreen class
 from project_echo.screens.password_verification_screen import PasswordVerificationScreen
 from project_echo.services.telegram_service import TelegramService
 from project_echo.services.country_service import CountryService
@@ -22,7 +22,6 @@ from project_echo.services.country_service import CountryService
 Builder.load_file("project_echo/screens/accounts_screen.kv")
 Builder.load_file("project_echo/screens/login_screen.kv")
 Builder.load_file("project_echo/screens/code_verification_screen.kv")
-# FIX: Load the missing KV file for the password screen
 Builder.load_file("project_echo/screens/password_verification_screen.kv")
 
 
@@ -43,7 +42,7 @@ class ProjectEchoApp(MDApp):
 
     telegram_service = ObjectProperty(None)
     country_service = ObjectProperty(None)
-    accounts_panel_widget = ObjectProperty(None) # To hold the instance
+    accounts_panel_widget = ObjectProperty(None)
 
     def build(self):
         """Initializes the application and returns the root widget."""
@@ -81,10 +80,8 @@ class ProjectEchoApp(MDApp):
             )
             self.root.ids.nav_list.add_widget(nav_button)
             
-        # Add all login-flow screens to the ScreenManager
         self.root.ids.screen_manager.add_widget(LoginScreen(name='login_screen'))
         self.root.ids.screen_manager.add_widget(CodeVerificationScreen(name='code_verification_screen'))
-        # FIX: Add the password verification screen to the manager
         self.root.ids.screen_manager.add_widget(PasswordVerificationScreen(name='password_verification_screen'))
 
         self.root.ids.screen_manager.current = 'dashboard'
@@ -99,6 +96,25 @@ class ProjectEchoApp(MDApp):
     def go_to_login(self, *args):
         """Switches to the login screen."""
         self.switch_screen('login_screen')
+
+    # FIX: Added the missing save_session method
+    def save_session(self, phone_number, session_string):
+        """Saves the session string to a file and switches to the accounts screen."""
+        # Sanitize phone number to use as a filename
+        filename = f"{phone_number.replace('+', '')}.session"
+        
+        # Get the absolute path to the project's root directory
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        file_path = os.path.join(project_root, filename)
+
+        try:
+            with open(file_path, "w") as f:
+                f.write(session_string)
+            print(f"Session saved successfully to {file_path}")
+            # Switch to the accounts screen to see the new account
+            self.switch_screen('accounts')
+        except IOError as e:
+            print(f"Error saving session file: {e}")
 
 # ==========================================================================
 # >> MAIN EXECUTION
