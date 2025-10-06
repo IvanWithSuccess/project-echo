@@ -1,4 +1,3 @@
-
 # =========================================================================
 # >> CUSTOM WIDGET DEFINITIONS
 # =========================================================================
@@ -12,58 +11,70 @@
 
     canvas.before:
         Color:
-            rgba: 0, 0, 0, 0
+            rgba: 0, 0, 0, 0 # Transparent background
         Rectangle:
             pos: self.pos
             size: self.size
 
-    # FIX: Renamed the id to avoid conflict with the 'icon' property
-    MDIcon:
-        id: icon_widget
-        icon: root.icon
-        pos_hint: {'center_x': 0.5}
-        font_size: dp(24)
-        adaptive_size: True
+    # NOTE: Icon is removed as standard Kivy doesn't support it directly.
 
-    MDLabel:
+    Label:
         text: root.text
-        pos_hint: {'center_x': 0.5}
-        font_style: "Caption"
+        size_hint_y: None
+        height: self.texture_size[1]
         font_size: "10sp"
-        adaptive_size: True
+        halign: 'center'
 
 # =========================================================================
 # >> MAIN LAYOUT KV
 # ==========================================================================
 
-MDBoxLayout:
+BoxLayout:
     orientation: 'horizontal'
 
-    MDBoxLayout:
+    # Side Navigation Panel
+    BoxLayout:
         orientation: 'vertical'
         size_hint_x: None
         width: dp(80)
-        md_bg_color: self.theme_cls.bg_light
         padding: [dp(4), dp(16), dp(4), 0]
         spacing: dp(16)
+        canvas.before:
+            Color:
+                rgba: 0.95, 0.95, 0.95, 1 # Light gray background
+            Rectangle:
+                pos: self.pos
+                size: self.size
 
-        MDLabel:
+        Label:
             text: "Echo"
-            font_style: "H6"
+            font_size: '20sp'
+            bold: True
+            color: 0.2, 0.2, 0.2, 1
             halign: "center"
-            adaptive_height: True
+            size_hint_y: None
+            height: self.texture_size[1]
 
-        MDBoxLayout:
+        BoxLayout:
             id: nav_list
             orientation: 'vertical'
-            adaptive_height: True
+            size_hint_y: None
+            height: self.minimum_height
             spacing: dp(8)
 
-        Widget:
+        Widget: # Spacer
             size_hint_y: 1
 
-    MDSeparator:
-        orientation: 'vertical'
+    # Separator
+    Widget:
+        size_hint_x: None
+        width: dp(1)
+        canvas.before:
+            Color:
+                rgba: 0.8, 0.8, 0.8, 1 # Gray color for separator line
+            Rectangle:
+                pos: self.pos
+                size: self.size
 
-    MDScreenManager:
+    ScreenManager:
         id: screen_manager

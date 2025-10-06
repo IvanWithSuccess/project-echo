@@ -4,9 +4,9 @@ import asyncio
 import threading
 from kivy.lang import Builder
 from kivy.core.window import Window
-from kivymd.app import MDApp
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.label import MDLabel
+from kivy.app import App  # FIX: Use standard Kivy App
+from kivy.uix.screenmanager import Screen  # FIX: Use standard Kivy Screen
+from kivy.uix.label import Label # FIX: Use standard Kivy Label
 from functools import partial
 from kivy.properties import StringProperty, ObjectProperty
 from kivy.uix.boxlayout import BoxLayout
@@ -35,7 +35,7 @@ class NavButton(ButtonBehavior, BoxLayout):
 # >> MAIN APP CLASS
 # =========================================================================
 
-class ProjectEchoApp(MDApp):
+class ProjectEchoApp(App):  # FIX: Inherit from App
     """The main application class with a custom side navigation."""
 
     phone_to_verify = StringProperty()
@@ -46,7 +46,6 @@ class ProjectEchoApp(MDApp):
     country_service = ObjectProperty(None)
     accounts_panel_widget = ObjectProperty(None)
 
-    # FIX: Add asyncio loop management
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.loop = asyncio.new_event_loop()
@@ -55,8 +54,6 @@ class ProjectEchoApp(MDApp):
 
     def build(self):
         """Initializes the application and returns the root widget."""
-        self.theme_cls.theme_style = "Dark"
-        self.theme_cls.primary_palette = "Gray"
         Window.maximize()
         self.telegram_service = TelegramService()
         self.country_service = CountryService()
@@ -67,18 +64,18 @@ class ProjectEchoApp(MDApp):
         self.thread.start() # Start the asyncio event loop thread
         
         screens_data = {
-            "dashboard": {"icon": "view-dashboard", "title": "Dashboard"},
-            "accounts": {"icon": "account-group", "title": "Accounts"},
-            "campaigns": {"icon": "bullhorn", "title": "Campaigns"},
+            "dashboard": {"icon": "", "title": "Dashboard"},
+            "accounts": {"icon": "", "title": "Accounts"},
+            "campaigns": {"icon": "", "title": "Campaigns"},
         }
 
         for screen_name, screen_info in screens_data.items():
-            screen = MDScreen(name=screen_name)
+            screen = Screen(name=screen_name)  # FIX: Use standard Screen
             if screen_name == "accounts":
                 self.accounts_panel_widget = AccountsPanel()
                 screen.add_widget(self.accounts_panel_widget)
             else:
-                screen.add_widget(MDLabel(
+                screen.add_widget(Label(  # FIX: Use standard Label
                     text=f"{screen_info['title']} content here",
                     halign="center"
                 ))
@@ -101,7 +98,6 @@ class ProjectEchoApp(MDApp):
         """Stop the asyncio event loop."""
         self.loop.call_soon_threadsafe(self.loop.stop)
 
-    # FIX: Add a helper to run async tasks from the Kivy thread
     def run_async(self, coro):
         """Helper to run a coroutine on the asyncio event loop."""
         return asyncio.run_coroutine_threadsafe(coro, self.loop)
