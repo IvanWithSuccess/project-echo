@@ -1,0 +1,75 @@
+<LoginScreen>:
+    name: "login_screen"
+
+    MDFloatLayout:
+
+        # Back button
+        MDIconButton:
+            icon: "arrow-left"
+            pos_hint: {"top": 0.98, "x": 0.02}
+            on_release: app.root.ids.screen_manager.current = 'accounts'
+
+        MDBoxLayout:
+            orientation: 'vertical'
+            adaptive_size: True
+            width: dp(340)
+            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+            spacing: dp(20)
+
+            # 1. Telegram Logo
+            MDIcon:
+                icon: 'telegram'
+                halign: 'center'
+                font_size: "120sp"
+                theme_text_color: "Custom"
+                text_color: (36/255, 161/255, 222/255, 1) # Telegram blue
+
+            # 2. Title
+            MDLabel:
+                text: "Sign in to Telegram"
+                halign: 'center'
+                font_style: 'H5'
+                adaptive_height: True
+                padding_y: dp(15)
+
+            # 3. Subtitle
+            MDLabel:
+                text: "Please confirm your country and\nenter your phone number."
+                halign: 'center'
+                adaptive_height: True
+                theme_text_color: "Secondary"
+
+            # 4. Country Input
+            MDTextField:
+                id: country_field
+                hint_text: "Country"
+                text: "Ukraine"
+                mode: "fill"
+                line_color_focus: (36/255, 161/255, 222/255, 1)
+
+            # 5. Phone Number Input
+            MDTextField:
+                id: phone_field
+                hint_text: "Phone Number"
+                text: "+380"
+                mode: "fill"
+                line_color_focus: (36/255, 161/255, 222/255, 1)
+
+            # 6. NEXT Button
+            MDRaisedButton:
+                text: "NEXT"
+                md_bg_color: (36/255, 161/255, 222/255, 1)
+                pos_hint: {'center_x': 0.5}
+                size_hint_x: 1
+                padding_y: dp(15)
+                # FIX: Connect the button to the Python logic
+                on_release: root.on_next_button_press()
+
+            # 7. Other login options
+            MDTextButton:
+                text: "LOG IN BY QR CODE"
+                halign: "center"
+                theme_text_color: "Custom"
+                text_color: (36/255, 161/255, 222/255, 1)
+                pos_hint: {'center_x': 0.5}
+

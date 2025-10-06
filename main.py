@@ -12,9 +12,14 @@ from kivy.uix.behaviors import ButtonBehavior
 
 # Import our custom screen content
 from project_echo.screens.accounts_screen import AccountsPanel
+# FIX: Import the new LoginScreen
+from project_echo.screens.login_screen import LoginScreen
 
 # Load KV files
 Builder.load_file("project_echo/screens/accounts_screen.kv")
+# FIX: Load the new login_screen.kv file
+Builder.load_file("project_echo/screens/login_screen.kv")
+
 
 class NavButton(ButtonBehavior, MDBoxLayout):
     text = StringProperty("")
@@ -32,8 +37,6 @@ class ProjectEchoApp(MDApp):
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Gray"
         Window.maximize()
-        # FIX: Removed all Python-side transition logic.
-        # The transition is now handled entirely and more reliably in main.kv.
         return Builder.load_file('main.kv')
 
     def on_start(self):
@@ -44,6 +47,7 @@ class ProjectEchoApp(MDApp):
             "campaigns": {"icon": "bullhorn", "title": "Campaigns"},
         }
 
+        # Add main navigation screens
         for screen_name, screen_info in screens_data.items():
             screen = MDScreen(name=screen_name)
             if screen_name == "accounts":
@@ -61,7 +65,11 @@ class ProjectEchoApp(MDApp):
                 on_release=partial(self.switch_screen, screen_name)
             )
             self.root.ids.nav_list.add_widget(nav_button)
+            
+        # FIX: Add the LoginScreen to the ScreenManager
+        self.root.ids.screen_manager.add_widget(LoginScreen())
 
+        # Set the default screen
         self.root.ids.screen_manager.current = 'dashboard'
 
     def switch_screen(self, screen_name, *args):

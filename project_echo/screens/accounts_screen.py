@@ -1,5 +1,7 @@
+
 from kivy.lang import Builder
 from kivy.metrics import dp
+from kivymd.app import MDApp # FIX: Import MDApp to access the running app instance
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton, MDRaisedButton
@@ -43,16 +45,14 @@ class AccountsPanel(MDBoxLayout):
             menu_items = [
                 {
                     "viewclass": "OneLineIconListItem",
-                    "text": "Add manually",
-                    # FIX: Reduced item height for a more compact menu
+                    "text": "Add new",
                     "height": dp(48),
-                    "on_release": self.show_add_account_dialog,
+                    "on_release": self.go_to_login_screen,
                     "left_icon": "pencil"
                 },
                 {
                     "viewclass": "OneLineIconListItem",
-                    "text": "Import from API",
-                    # FIX: Reduced item height for a more compact menu
+                    "text": "Mass import",
                     "height": dp(48),
                     "on_release": self.show_api_import_dialog,
                     "left_icon": "cloud-upload-outline"
@@ -62,26 +62,17 @@ class AccountsPanel(MDBoxLayout):
                 caller=self.ids.add_button,
                 items=menu_items,
                 position="top",
-                # FIX: Reduced width for a more compact menu
                 width_mult=3.5,
             )
         self.menu.open()
 
-    def show_add_account_dialog(self):
-        """Creates and shows a new 'Add Account' dialog."""
-        if self.menu: 
+    # FIX: Renamed and repurposed this method to switch screens
+    def go_to_login_screen(self):
+        """Switches the screen to the login screen."""
+        if self.menu:
             self.menu.dismiss()
-            
-        self.dialog = MDDialog(
-            title="Add New Account",
-            type="custom",
-            content_cls=DialogContent(),
-            buttons=[
-                MDFlatButton(text="CANCEL", on_release=self.close_dialog),
-                MDRaisedButton(text="ADD", on_release=self.add_account),
-            ],
-        )
-        self.dialog.open()
+        # Access the app's root and switch the screen
+        MDApp.get_running_app().root.ids.screen_manager.current = 'login_screen'
     
     def show_api_import_dialog(self):
         """Placeholder for the API import dialog."""
