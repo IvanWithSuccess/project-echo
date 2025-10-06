@@ -2,26 +2,20 @@
 #:import Window kivy.core.window.Window
 #:import NoTransition kivy.uix.screenmanager.NoTransition
 
-# A more advanced NavButton that contains a sized Image
-<NavButton@FloatLayout>:
+# CORRECTED: Mix ButtonBehavior directly into the FloatLayout
+<NavButton@ButtonBehavior+FloatLayout>:
     size_hint_y: None
-    height: '50dp' # Reduced button height
-    source: ''      # Property for the icon path
-    panel_name: '' # Property for the panel to switch to
-
-    # The behavior that makes the layout clickable
-    ButtonBehavior:
-        # When released, call the app's switch_panel method with the correct panel name
-        on_release: app.switch_panel(root.panel_name)
+    height: '50dp'
+    source: ''
+    panel_name: ''
+    # The on_release event now belongs to the NavButton itself
+    on_release: app.switch_panel(root.panel_name)
 
     # The actual icon image
     Image:
-        source: root.source # Link to the source property of the NavButton
+        source: root.source
         size_hint: None, None
-        # Set a fixed size for the icon, e.g., 28x28 pixels
-        # This is about 3-4 times smaller than the previous 60dp.
         size: (dp(28), dp(28))
-        # Center the image inside the FloatLayout
         pos_hint: {'center_x': 0.5, 'center_y': 0.5}
 
 # --- The ONE Root Widget ---
@@ -35,7 +29,7 @@ BoxLayout:
         size_hint_x: None
         width: '80dp'
         padding: '10dp'
-        spacing: '15dp' # Increased spacing a bit
+        spacing: '15dp'
         canvas.before:
             Color:
                 rgba: (0.95, 0.95, 0.95, 1)
@@ -51,7 +45,7 @@ BoxLayout:
             height: '48dp'
             color: (0, 0, 0, 1)
 
-        # Use the new NavButton with source and panel_name properties
+        # Use the corrected NavButton definition
         NavButton:
             panel_name: 'dashboard'
             source: 'assets/icons/dashboard.png'
