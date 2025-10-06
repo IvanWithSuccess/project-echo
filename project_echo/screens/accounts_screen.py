@@ -1,25 +1,23 @@
 import os
-from kivy.lang import Builder
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.label import MDLabel
-from kivymd.uix.list import OneLineIconListItem, IconLeftWidget
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.button import Button
 
-# FIX: Removed Builder call. All KV files will be loaded centrally in main.py
-# for better stability and predictable loading order.
-
-class AccountsPanel(MDBoxLayout):
-    """A panel to display and manage user accounts."""
+class AccountsPanel(BoxLayout):
+    """A panel to display and manage user accounts using standard Kivy widgets."""
 
     def populate_accounts(self):
         """
         Scans the root directory for .session files and populates the list.
         This method is called from the main app to ensure the list is always fresh.
         """
+        # Ensure the target widget exists before proceeding
         if not self.ids.get('accounts_list'):
             return
             
         self.ids.accounts_list.clear_widgets()
 
+        # Correctly determine the project root to find session files
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
         found_accounts = False
@@ -28,19 +26,24 @@ class AccountsPanel(MDBoxLayout):
                 if filename.endswith(".session"):
                     phone_number = os.path.splitext(filename)[0]
                     
-                    account_item = OneLineIconListItem(text=phone_number)
-                    icon = IconLeftWidget(icon="account-circle")
-                    account_item.add_widget(icon)
+                    # Use a standard Kivy Button to represent the account
+                    account_item = Button(
+                        text=phone_number,
+                        size_hint_y=None,
+                        height='48dp'
+                    )
                     self.ids.accounts_list.add_widget(account_item)
                     found_accounts = True
         except FileNotFoundError:
+            # This might happen if the directory doesn't exist, though unlikely
             pass
 
+        # If no .session files were found, display a message
         if not found_accounts:
             self.ids.accounts_list.add_widget(
-                MDLabel(
+                Label(
                     text="No accounts found. Add one!",
                     halign="center",
-                    theme_text_color="Secondary"
+                    color=(0.5, 0.5, 0.5, 1) # A grayish color for secondary text
                 )
             )
