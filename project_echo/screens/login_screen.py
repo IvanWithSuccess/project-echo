@@ -6,9 +6,10 @@ from kivymd.uix.button import MDFlatButton
 from kivymd.uix.list import OneLineAvatarIconListItem
 from kivy.properties import StringProperty
 
-# FIX: Create a custom list item to handle selection
+
 class CountryListItem(OneLineAvatarIconListItem):
     code = StringProperty()
+
 
 class LoginScreen(Screen):
     """Login screen for entering phone number."""
@@ -17,17 +18,15 @@ class LoginScreen(Screen):
         super().__init__(**kwargs)
         self.app = MDApp.get_running_app()
         self.dialog = None
-        self.country_dialog = None # FIX: Add a dialog for countries
+        self.country_dialog = None
 
     def on_enter(self, *args):
         self.ids.spinner.active = False
         self.ids.country_field.text = ""
         self.ids.phone_field.text = ""
-        # FIX: Bind text input changes to the auto-detection function
         self.ids.phone_field.bind(text=self.on_phone_text_change)
 
     def on_phone_text_change(self, instance, value):
-        """Automatically update the country field based on the phone code."""
         country_name = self.app.country_service.get_country_by_code(value)
         if country_name:
             self.ids.country_field.text = country_name
@@ -39,16 +38,15 @@ class LoginScreen(Screen):
         if not country or not phone:
             self.show_error_dialog("Country and phone number are required.")
             return
-        
-        # The phone field may already contain the country code
-        full_phone = phone if phone.startswith('+') else f"{self.app.country_service.get_code_by_country(country)}{phone}"
+
+        # FIX: Use the correct method name `get_country_code`
+        full_phone = phone if phone.startswith('+') else f"{self.app.country_service.get_country_code(country)}{phone}"
         self.app.phone_to_verify = full_phone
         self.ids.spinner.active = True
-        
+
         self.app.run_async(self.async_send_code(full_phone))
 
     async def async_send_code(self, phone):
-        """Asynchronously sends the verification code."""
         result = await self.app.telegram_service.send_code(phone)
         Clock.schedule_once(lambda dt: self.process_send_code_result(result))
 
@@ -61,17 +59,16 @@ class LoginScreen(Screen):
         else:
             self.show_error_dialog(result.get("error", "An unknown error occurred."))
 
-    # FIX: Corrected the loop to properly unpack country data
+    # FIX: Correctly unpack the tuple from `get_all_countries`
     def open_country_dialog(self):
         if not self.country_dialog:
             items = []
-            # Correctly iterate over country names and get code separately
-            for country_name in self.app.country_service.get_all_countries():
-                code = self.app.country_service.get_code_by_country(country_name)
+            # Correctly unpack (country_name, code) tuple
+            for country_name, code in self.app.country_service.get_all_countries():
                 item = CountryListItem(text=country_name, code=str(code) if code else "")
                 item.bind(on_release=self.select_country)
                 items.append(item)
-            
+
             self.country_dialog = MDDialog(
                 title="Choose a Country",
                 type="simple",
@@ -80,7 +77,6 @@ class LoginScreen(Screen):
         self.country_dialog.open()
 
     def select_country(self, instance):
-        """Handle the selection of a country from the dialog."""
         self.ids.country_field.text = instance.text
         self.ids.phone_field.text = instance.code
         self.country_dialog.dismiss()
