@@ -1,5 +1,5 @@
 import asyncio
-
+from kivy.clock import Clock
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
@@ -7,21 +7,23 @@ from kivymd.uix.screen import MDScreen
 
 
 class CodeVerificationScreen(MDScreen):
-    """The code verification screen, refactored for asynchronous operation and stability."""
+    """The code verification screen, with UI updates handled declaratively in KV."""
 
     def on_pre_enter(self, *args):
+        """
+        Resets the screen state. The info label is now handled by the KV file.
+        """
         self.app = MDApp.get_running_app()
         self.ids.code_field.text = ""
         self.ids.password_field.text = ""
         self.ids.password_field.disabled = True
         self.ids.spinner.active = False
         self.ids.code_field.focus = True
-        self.ids.info_label.text = f"Enter the code sent to {self.app.phone_to_verify}"
+        # FINAL FIX: The line causing the crash has been completely removed.
+        # The label's text is now bound directly to the app property in the KV file.
 
     def verify_code(self):
-        """
-        FIX: Uses asyncio.run to correctly start the async task from sync Kivy code.
-        """
+        """Starts the asynchronous code verification process."""
         try:
             asyncio.run(self.verify_code_async())
         except RuntimeError as e:
@@ -37,14 +39,12 @@ class CodeVerificationScreen(MDScreen):
 
         password_to_send = password if not self.ids.password_field.disabled and password else None
 
-        # FIX: Pass the phone_code_hash to the verification method.
         result = await self.app.telegram_service.verify_code(phone, code, phone_code_hash, password_to_send)
 
         self.ids.spinner.active = False
 
         if result.get("success"):
             self.show_dialog("Success!", "You have successfully logged in.")
-            # Switch to accounts and trigger a refresh
             self.app.switch_screen('accounts')
         elif result.get("password_needed"):
             self.ids.password_field.disabled = False

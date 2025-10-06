@@ -12,7 +12,7 @@
             orientation: 'vertical'
             adaptive_size: True
             width: "300dp"
-            pos_hint: {'center_x': 0.5, 'center_y': 0.6}
+            pos_hint: {'center_x': 0.5, 'center_y': 0.65}
             spacing: "20dp"
 
             MDLabel:
@@ -21,8 +21,11 @@
                 font_style: 'H5'
                 adaptive_height: True
 
+            # FINAL, DECLARATIVE FIX: The label's text is now directly bound
+            # to the app's 'phone_to_verify' property. This is the correct Kivy way.
             MDLabel:
-                text: "We have sent you the code.\nPlease enter it below."
+                id: info_label
+                text: f"Enter the code sent to {app.phone_to_verify}"
                 halign: 'center'
                 adaptive_height: True
                 theme_text_color: "Secondary"
@@ -32,13 +35,12 @@
                 hint_text: "Confirmation Code"
                 halign: "center"
 
-            # FIX: Password field is now disabled by default
             MDTextField:
                 id: password_field
                 hint_text: "2FA Password (if any)"
                 password: True
                 halign: "center"
-                disabled: True  # Will be enabled if needed
+                disabled: True
 
             MDFillRoundFlatButton:
                 text: "CONFIRM"

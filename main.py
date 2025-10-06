@@ -33,7 +33,6 @@ class NavButton(ButtonBehavior, BoxLayout):
 class ProjectEchoApp(MDApp):
     """The main application class with a custom side navigation."""
 
-    # FIX: Added property to store the hash required for code verification.
     phone_to_verify = StringProperty()
     phone_code_hash = StringProperty()
 
