@@ -4,8 +4,6 @@ class CountryService:
     """
 
     def __init__(self):
-        # FIX: Corrected SyntaxError by wrapping multiple codes in lists.
-        # The methods below have been updated to handle this structure.
         self._countries = {
             'Afghanistan': '+93',
             'Albania': '+355',
@@ -250,25 +248,41 @@ class CountryService:
         }
 
     def get_all_countries(self):
-        """Returns the entire list of countries, sorted alphabetically."""
-        return sorted(self._countries.keys())
+        """Returns a list of tuples (country_name, code)."""
+        all_countries = []
+        for name, code_or_codes in sorted(self._countries.items()):
+            if isinstance(code_or_codes, list):
+                # For countries with multiple codes, create an entry for each
+                for code in code_or_codes:
+                    all_countries.append((name, code))
+            else:
+                all_countries.append((name, code_or_codes))
+        return all_countries
 
     def find_countries(self, search_text: str):
         """Finds countries whose names start with the search text."""
         search_text = search_text.lower()
         return [name for name in self._countries if name.lower().startswith(search_text)]
 
-    def get_country_by_code(self, code: str):
-        """Finds the country name for a given phone code, handling lists of codes."""
-        for name, c in self._countries.items():
-            if isinstance(c, list):
-                if code in c:
-                    return name
-            elif c == code:
-                return name
-        return None
+    def get_country_by_code(self, code_prefix: str):
+        """Finds the most likely country name for a given phone code prefix."""
+        if not code_prefix.startswith('+'):
+            return None
+        
+        # Search for the best match (longest prefix)
+        best_match = None
+        longest_match_len = 0
 
-    def get_code_by_country(self, country_name: str):
+        for name, code_or_codes in self._countries.items():
+            codes = code_or_codes if isinstance(code_or_codes, list) else [code_or_codes]
+            for code in codes:
+                if code_prefix.startswith(code):
+                    if len(code) > longest_match_len:
+                        longest_match_len = len(code)
+                        best_match = name
+        return best_match
+
+    def get_country_code(self, country_name: str):
         """Gets the primary phone code for a given country name."""
         code_or_codes = self._countries.get(country_name)
         if isinstance(code_or_codes, list):

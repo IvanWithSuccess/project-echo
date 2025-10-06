@@ -41,7 +41,7 @@ class LoginScreen(Screen):
             return
         
         # The phone field may already contain the country code
-        full_phone = phone if phone.startswith('+') else f"{self.app.country_service.get_country_code(country)}{phone}"
+        full_phone = phone if phone.startswith('+') else f"{self.app.country_service.get_code_by_country(country)}{phone}"
         self.app.phone_to_verify = full_phone
         self.ids.spinner.active = True
         
@@ -61,12 +61,14 @@ class LoginScreen(Screen):
         else:
             self.show_error_dialog(result.get("error", "An unknown error occurred."))
 
-    # FIX: Full implementation of the country selection dialog
+    # FIX: Corrected the loop to properly unpack country data
     def open_country_dialog(self):
         if not self.country_dialog:
             items = []
-            for country_name, code in self.app.country_service.get_all_countries():
-                item = CountryListItem(text=country_name, code=code)
+            # Correctly iterate over country names and get code separately
+            for country_name in self.app.country_service.get_all_countries():
+                code = self.app.country_service.get_code_by_country(country_name)
+                item = CountryListItem(text=country_name, code=str(code) if code else "")
                 item.bind(on_release=self.select_country)
                 items.append(item)
             
