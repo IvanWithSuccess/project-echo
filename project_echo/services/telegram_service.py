@@ -14,14 +14,12 @@ class TelegramService:
     """
 
     def __init__(self):
-        # The service itself is now stateless and does not hold client instances.
         pass
 
     async def send_code(self, phone):
         """
         Creates a new client, sends the code, and returns the session state.
         """
-        # Use a temporary in-memory string session
         client = TelegramClient(StringSession(), API_ID, API_HASH)
         try:
             await client.connect()
@@ -46,39 +44,32 @@ class TelegramService:
         Restores a client from a session string, verifies the code or password,
         and returns the result.
         """
-        # Restore the session from the string provided by the UI layer
         client = TelegramClient(StringSession(session_string), API_ID, API_HASH)
         try:
             await client.connect()
 
-            # This is the initial code verification step
             if not password:
                 try:
                     await client.sign_in(phone=phone, code=code, phone_code_hash=phone_code_hash)
-                except SessionPasswordNeededError:
-                    # The server needs a password. Save the updated session state
-                    # and signal the UI to ask for the password.
-                    hint = await client.get_password_hint()
+                # FIX: Correctly get hint from the exception object itself.
+                except SessionPasswordNeededError as e:
                     updated_session_string = client.session.save()
                     return {
                         "password_needed": True,
-                        "hint": hint,
+                        "hint": e.hint, # Correct way to get the hint
                         "session_string": updated_session_string
                     }
 
-            # This is the second step: verifying the 2FA password
             if password:
                 try:
                     await client.sign_in(password=password)
                 except PasswordHashInvalidError:
                     return {"success": False, "error": "Invalid password. Please try again."}
 
-            # If we reach here, login was successful
             if await client.is_user_authorized():
                 final_session_string = client.session.save()
                 return {"success": True, "session_string": final_session_string}
             else:
-                # Fallback for unknown errors
                 return {"success": False, "error": "An unknown authorization error occurred."}
 
         except PhoneCodeInvalidError:
@@ -87,5 +78,4 @@ class TelegramService:
             return {"success": False, "error": str(e)}
         finally:
             if client.is_connected():
-                # Always disconnect after the operation is complete
                 await client.disconnect()

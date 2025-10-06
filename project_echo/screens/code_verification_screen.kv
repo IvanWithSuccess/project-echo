@@ -10,8 +10,9 @@
 
         MDBoxLayout:
             orientation: 'vertical'
-            size_hint_x: None  # FIX: Use size_hint_x to allow for a fixed width
-            width: "500dp"      # FIX: Put value in quotes as expected by KV lang
+            size_hint_x: None
+            width: "500dp"
+            adaptive_height: True  # FIX: Make the layout height fit its content
             pos_hint: {'center_x': 0.5, 'center_y': 0.5}
             spacing: "20dp"
 
