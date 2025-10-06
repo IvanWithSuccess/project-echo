@@ -13,6 +13,7 @@
     valign: 'middle'
     padding_x: '20dp'
     text_size: self.width - dp(40), self.height
+    # Change background on press
     background_normal: ''
     background_down: 'atlas://data/images/defaulttheme/button_pressed'
 
@@ -56,7 +57,7 @@ BoxLayout:
         NavButton:
             id: campaigns_button
             text: 'Campaigns'
-            on_release: app.switch_panel('campaigns')
+            on_release: app.switch_panel('campaigns') # This will now work
 
         Widget: # Spacer
             size_hint_y: 1.0
@@ -79,12 +80,19 @@ BoxLayout:
                 name: 'dashboard'
                 Label:
                     text: "Dashboard content here"
-                    color: (0, 0, 0, 1) # Black text
+                    color: (0, 0, 0, 1)
             
             Screen:
                 name: 'accounts'
                 AccountsPanel:
                     id: accounts_panel
+
+            # This screen is now defined, preventing the crash
+            Screen:
+                name: 'campaigns'
+                Label:
+                    text: "Campaigns content will be here"
+                    color: (0, 0, 0, 1)
 
             Screen:
                 name: 'login'
@@ -100,8 +108,3 @@ BoxLayout:
                 name: 'password_verification'
                 PasswordVerificationScreen:
                     id: password_verification_screen
-
-            # --- Add the new Campaigns Screen ---
-            CampaignsScreen:
-                name: 'campaigns'
-                id: campaigns_screen

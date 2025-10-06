@@ -12,6 +12,8 @@ from kivy.properties import StringProperty, ListProperty
 
 class LoginScreen(Screen):
     """Screen for user login, including country selection and phone number input."""
+    # This property will be bound to the country selection button's text
+    selected_country_name = StringProperty("Choose a Country")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -24,32 +26,30 @@ class LoginScreen(Screen):
         """Reset fields when the screen is shown."""
         self.ids.spinner_label.text = ""
         self.ids.phone_field.text = ""
-        # Use a more descriptive default text
-        self.ids.country_button.text = "Select Country"
+        self.selected_country_name = "Choose a Country"
         # Load countries from the service when the screen is entered
         self.all_countries = self.app.country_service.get_all_countries()
 
     def send_code(self):
         """Validates input and initiates the Telegram code request."""
         phone_number = self.ids.phone_field.text
-        country_code = self.app.get_country_code(self.ids.country_button.text)
+        # Get the dial code from the service using the selected name
+        dial_code = self.app.country_service.get_country_code(self.selected_country_name)
 
-        if not country_code:
+        if not dial_code:
             self.show_error_popup("Please select a country.")
             return
         if not phone_number:
             self.show_error_popup("Please enter your phone number.")
             return
 
-        full_phone = f"{country_code}{phone_number}"
+        full_phone = f"{dial_code}{phone_number}"
         self.ids.spinner_label.text = "Sending code..."
-        # Use the app's async runner
         self.app.run_async(self.async_send_code(full_phone))
 
     async def async_send_code(self, phone):
         """Asynchronously calls the Telegram service."""
         result = await self.app.telegram_service.send_code(phone)
-        # Schedule UI updates on the main thread
         Clock.schedule_once(lambda dt: self.process_send_code_result(result, phone))
 
     def process_send_code_result(self, result, phone):
@@ -70,10 +70,9 @@ class LoginScreen(Screen):
             search_input = TextInput(hint_text="Search...", size_hint_y=None, height='48dp')
             search_input.bind(text=self.on_search_text)
             
-            rv = RecycleView(size_hint_y=1)
+            rv = RecycleView(size_hint=(1, 1))
             rv.viewclass = 'Button'
-            rv.data = [] # Initially empty
-
+            
             content.add_widget(search_input)
             content.add_widget(rv)
 
@@ -83,7 +82,6 @@ class LoginScreen(Screen):
                 size_hint=(0.9, 0.9)
             )
         
-        # Reset search and populate list every time it's opened
         self.country_dialog.content.children[1].text = '' # Clear search input
         self.update_country_list(self.all_countries)
         self.country_dialog.open()
@@ -94,11 +92,12 @@ class LoginScreen(Screen):
         rv.data = [
             {
                 'text': f"{name} ({code})",
-                'on_release': lambda name=name, code=code: self.select_country(name, code),
+                'on_release': lambda name=name, dial_code=code: self.select_country(name, dial_code),
                 'size_hint_y': None,
                 'height': '48dp',
                 'halign': 'left',
-                'valign': 'middle'
+                'valign': 'middle',
+                'text_size': (rv.width - 40, None)
             }
             for name, code in countries_list
         ]
@@ -108,15 +107,13 @@ class LoginScreen(Screen):
         filtered_countries = self.app.country_service.search_countries(value)
         self.update_country_list(filtered_countries)
 
-    def select_country(self, name, code):
+    def select_country(self, name, dial_code):
         """Handles the selection of a country from the dialog."""
-        self.ids.country_button.text = name
-        # The country code is now managed by the app service
+        self.selected_country_name = name # Update the property
         self.country_dialog.dismiss()
 
     def show_error_popup(self, text):
         """Displays a generic error popup."""
-        # Prevent multiple popups
         if self.error_popup and self.error_popup.content:
             self.error_popup.dismiss()
 
@@ -128,9 +125,3 @@ class LoginScreen(Screen):
         self.error_popup = Popup(title="Error", content=content, size_hint=(0.8, 0.4))
         ok_button.bind(on_release=self.error_popup.dismiss)
         self.error_popup.open()
-
-    # This method needs to be added to the app class, not here.
-    # I will move it.
-    def get_country_code(self, country_name: str):
-        """Gets the phone code for a given country name from the service."""
-        return self.app.country_service.get_country_code(country_name)
