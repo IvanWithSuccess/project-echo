@@ -6,7 +6,6 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from functools import partial
 from kivy.properties import StringProperty, ObjectProperty
-# FIX: Import plain BoxLayout to avoid KivyMD ripple effect conflicts
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
 
@@ -23,9 +22,6 @@ Builder.load_file("project_echo/screens/login_screen.kv")
 Builder.load_file("project_echo/screens/code_verification_screen.kv")
 
 
-# FIX: Inherit from plain BoxLayout instead of MDBoxLayout.
-# This prevents the KivyMD ripple behavior from being automatically
-# and incorrectly applied to our custom composite widget, fixing the crash.
 class NavButton(ButtonBehavior, BoxLayout):
     text = StringProperty("")
     icon = StringProperty("")
@@ -50,7 +46,6 @@ class ProjectEchoApp(MDApp):
         Window.maximize()
         self.telegram_service = TelegramService()
         self.country_service = CountryService()
-        # 3. Finally, load the main layout.
         return Builder.load_file('main.kv')
 
     def on_start(self):
@@ -80,10 +75,13 @@ class ProjectEchoApp(MDApp):
             )
             self.root.ids.nav_list.add_widget(nav_button)
             
-        # FIX: Explicitly set the `name` for each screen when adding it.
-        # This is what allows the ScreenManager to find them.
-        self.root.ids.screen_manager.add_widget(LoginScreen(name='login_screen'))
-        self.root.ids.screen_manager.add_widget(CodeVerificationScreen(name='code_verification_screen'))
+        login_screen = LoginScreen()
+        login_screen.name = 'login_screen'
+        self.root.ids.screen_manager.add_widget(login_screen)
+
+        code_screen = CodeVerificationScreen()
+        code_screen.name = 'code_verification_screen'
+        self.root.ids.screen_manager.add_widget(code_screen)
 
         self.root.ids.screen_manager.current = 'dashboard'
 
@@ -93,6 +91,11 @@ class ProjectEchoApp(MDApp):
         if screen_name == "accounts":
             if self.accounts_panel_widget:
                 self.accounts_panel_widget.populate_accounts()
+
+    # FIX: Added a dedicated, robust method to handle screen switching.
+    def go_to_login(self, *args):
+        """Switches to the login screen."""
+        self.switch_screen('login_screen')
 
 # ==========================================================================
 # >> MAIN EXECUTION

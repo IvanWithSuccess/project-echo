@@ -11,7 +11,8 @@
         MDFillRoundFlatButton:
             text: "Add Account"
             icon: "account-plus"
-            on_release: app.root.ids.screen_manager.current = 'login_screen'
+            # FIX: Changed the direct, failing call to a dedicated app method for robustness.
+            on_release: app.go_to_login()
             pos_hint: {"center_y": 0.5}
 
         MDLabel:
@@ -22,7 +23,6 @@
 
     MDSeparator:
 
-    # FIX: Added the missing ScrollView and MDList with the correct id
     MDScrollView:
         MDList:
             id: accounts_list
