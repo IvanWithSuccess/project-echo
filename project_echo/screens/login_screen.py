@@ -2,7 +2,6 @@ import asyncio
 from functools import partial
 
 from kivy.lang import Builder
-from kivy.clock import Clock
 from kivy.properties import ObjectProperty
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
@@ -13,12 +12,13 @@ from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.boxlayout import MDBoxLayout
 
-# FIX: Removed Builder call. All KV files will be loaded centrally in main.py
 
 class LoginScreen(MDScreen):
     """The login screen, completely refactored to be asynchronous and more user-friendly."""
 
     country_dialog = ObjectProperty(None)
+    search_field = ObjectProperty(None)
+    country_list = ObjectProperty(None)
 
     def on_pre_enter(self, *args):
         """Initialize services and bind listeners."""
@@ -26,33 +26,44 @@ class LoginScreen(MDScreen):
         self.ids.phone_field.bind(text=self.sync_country_from_phone)
 
     def open_country_dialog(self):
-        """Opens a searchable dialog for country selection."""
+        """
+        FIX: Opens a searchable dialog for country selection.
+        This logic has been fixed to prevent the UnboundLocalError by ensuring
+        the dialog and its components are created once and reused correctly.
+        """
         if not self.country_dialog:
-            search_field = MDTextField(
+            self.search_field = MDTextField(
                 hint_text="Search country...",
                 mode="fill",
-                on_text_validate=self._filter_countries,
             )
-            search_field.bind(text=self._filter_countries)
-            
+            self.search_field.bind(text=self._filter_countries)
+
             self.country_list = MDBoxLayout(orientation='vertical', adaptive_height=True)
             scroll = MDScrollView()
             scroll.add_widget(self.country_list)
 
+            content_layout = MDBoxLayout(
+                self.search_field, scroll, orientation="vertical", spacing="12dp", size_hint_y=None, height="400dp"
+            )
+
             self.country_dialog = MDDialog(
                 title="Choose a Country",
                 type="custom",
-                content_cls=MDBoxLayout(
-                    search_field, scroll, orientation="vertical", spacing="12dp", size_hint_y=None, height="400dp"
-                ),
+                content_cls=content_layout,
             )
-        self._filter_countries(search_field) # Populate with all countries initially
+        
+        # Always clear the search field and repopulate the list when opening
+        self.search_field.text = ""
+        self._filter_countries(self.search_field)
         self.country_dialog.open()
 
-    def _filter_countries(self, search_field, text=""):
+    def _filter_countries(self, instance, text=""):
         """Filters the country list based on user input in the search field."""
         self.country_list.clear_widgets()
-        countries = self.app.country_service.find_countries(search_field.text)
+        countries = self.app.country_service.find_countries(instance.text)
+        if not countries:
+            self.country_list.add_widget(OneLineListItem(text="No countries found"))
+
         for country_name in countries:
             code = self.app.country_service.get_code_by_country(country_name)
             item = OneLineListItem(
@@ -65,11 +76,13 @@ class LoginScreen(MDScreen):
         """Updates the UI with the selected country."""
         self.ids.country_field.text = country_name
         self.ids.phone_field.text = country_code
-        self.country_dialog.dismiss()
+        if self.country_dialog:
+            self.country_dialog.dismiss()
 
     def sync_country_from_phone(self, instance, phone_code):
         """Updates the country field based on the manually entered phone code."""
-        if self.app.country_service.get_code_by_country(self.ids.country_field.text) == phone_code:
+        current_code = self.app.country_service.get_code_by_country(self.ids.country_field.text)
+        if current_code == phone_code:
             return
         
         country = self.app.country_service.get_country_by_code(phone_code)
