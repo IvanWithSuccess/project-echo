@@ -17,17 +17,6 @@
     background_normal: ''
     background_down: 'atlas://data/images/defaulttheme/button_pressed'
 
-
-# The main container for the content area (right side)
-<ContentPanel>:
-    # This panel will now have a transparent background to show the window's background
-    canvas.before:
-        Color:
-            rgba: (1, 1, 1, 1) # Explicitly white
-        Rectangle:
-            pos: self.pos
-            size: self.size
-
 # --- The ONE Root Widget ---
 BoxLayout:
     orientation: 'horizontal'
@@ -74,8 +63,14 @@ BoxLayout:
             size_hint_y: 1.0
 
     # 2. Content Panel (Right Side)
-    ContentPanel:
+    BoxLayout:
         id: content_panel
+        canvas.before:
+            Color:
+                rgba: (1, 1, 1, 1) # White background
+            Rectangle:
+                pos: self.pos
+                size: self.size
         
         ScreenManager:
             id: screen_manager

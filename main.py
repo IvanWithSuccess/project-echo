@@ -1,18 +1,16 @@
-
 import os
 import asyncio
 import threading
 from kivy.lang import Builder
 from kivy.core.window import Window
-from kivy.app import App  # FIX: Use standard Kivy App
-from kivy.uix.screenmanager import Screen  # FIX: Use standard Kivy Screen
-from kivy.uix.label import Label # FIX: Use standard Kivy Label
+from kivy.app import App
+from kivy.uix.screenmanager import Screen
+from kivy.uix.label import Label
 from functools import partial
 from kivy.properties import StringProperty, ObjectProperty
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.behaviors import ButtonBehavior
 
-# 1. Import all Python classes first.
+# 1. Import all Python screen classes.
 from project_echo.screens.accounts_screen import AccountsPanel
 from project_echo.screens.login_screen import LoginScreen
 from project_echo.screens.code_verification_screen import CodeVerificationScreen
@@ -20,116 +18,89 @@ from project_echo.screens.password_verification_screen import PasswordVerificati
 from project_echo.services.telegram_service import TelegramService
 from project_echo.services.country_service import CountryService
 
-# 2. Now, load the KV files.
-Builder.load_file("project_echo/screens/accounts_screen.kv")
-Builder.load_file("project_echo/screens/login_screen.kv")
-Builder.load_file("project_echo/screens/code_verification_screen.kv")
-Builder.load_file("project_echo/screens/password_verification_screen.kv")
+# Note: The custom ContentPanel widget has been removed as it was causing issues.
+# A standard BoxLayout is now used directly in main.kv.
 
-
-class NavButton(ButtonBehavior, BoxLayout):
-    text = StringProperty("")
-    icon = StringProperty("")
-
-# =========================================================================
-# >> MAIN APP CLASS
-# =========================================================================
-
-class ProjectEchoApp(App):  # FIX: Inherit from App
-    """The main application class with a custom side navigation."""
-
-    phone_to_verify = StringProperty()
-    phone_code_hash = StringProperty()
-    session_string_for_password = StringProperty()
-
+class ProjectEchoApp(App):
+    """
+    Main application class.
+    """
+    # Properties to share data between screens
+    phone_to_verify = StringProperty(None)
+    phone_code_hash = StringProperty(None)
+    session_string_for_password = StringProperty(None)
     telegram_service = ObjectProperty(None)
     country_service = ObjectProperty(None)
-    accounts_panel_widget = ObjectProperty(None)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.loop = asyncio.new_event_loop()
-        self.thread = threading.Thread(target=self.loop.run_forever)
-        self.thread.daemon = True
-
-    def build(self):
-        """Initializes the application and returns the root widget."""
-        Window.maximize()
         self.telegram_service = TelegramService()
         self.country_service = CountryService()
+
+    def build(self):
+        """
+        Initializes the application and returns the root widget.
+        Loads the main KV file which defines the UI structure.
+        """
+        Window.size = (1200, 800)
+        # Load KV files for each screen. This is a good practice to keep the UI
+        # definitions modular.
+        Builder.load_file('project_echo/screens/accounts_screen.kv')
+        Builder.load_file('project_echo/screens/login_screen.kv')
+        Builder.load_file('project_echo/screens/code_verification_screen.kv')
+        Builder.load_file('project_echo/screens/password_verification_screen.kv')
+        
+        # The root widget is defined in main.kv
         return Builder.load_file('main.kv')
 
     def on_start(self):
-        """Start the asyncio thread and populate screens."""
-        self.thread.start() # Start the asyncio event loop thread
-        
-        screens_data = {
-            "dashboard": {"icon": "", "title": "Dashboard"},
-            "accounts": {"icon": "", "title": "Accounts"},
-            "campaigns": {"icon": "", "title": "Campaigns"},
-        }
+        """
+        Called after the build() method is finished.
+        """
+        # Start on the accounts screen
+        self.switch_panel('accounts')
 
-        for screen_name, screen_info in screens_data.items():
-            screen = Screen(name=screen_name)  # FIX: Use standard Screen
-            if screen_name == "accounts":
-                self.accounts_panel_widget = AccountsPanel()
-                screen.add_widget(self.accounts_panel_widget)
-            else:
-                screen.add_widget(Label(  # FIX: Use standard Label
-                    text=f"{screen_info['title']} content here",
-                    halign="center"
-                ))
-            self.root.ids.screen_manager.add_widget(screen)
+    # --- Navigation and Screen Management ---
 
-            nav_button = NavButton(
-                text=screen_info['title'],
-                icon=screen_info['icon'],
-                on_release=partial(self.switch_screen, screen_name)
-            )
-            self.root.ids.nav_list.add_widget(nav_button)
-            
-        self.root.ids.screen_manager.add_widget(LoginScreen(name='login_screen'))
-        self.root.ids.screen_manager.add_widget(CodeVerificationScreen(name='code_verification_screen'))
-        self.root.ids.screen_manager.add_widget(PasswordVerificationScreen(name='password_verification_screen'))
-
-        self.root.ids.screen_manager.current = 'dashboard'
-
-    def on_stop(self):
-        """Stop the asyncio event loop."""
-        self.loop.call_soon_threadsafe(self.loop.stop)
-
-    def run_async(self, coro):
-        """Helper to run a coroutine on the asyncio event loop."""
-        return asyncio.run_coroutine_threadsafe(coro, self.loop)
-
-    def switch_screen(self, screen_name, *args):
-        """Callback function to switch the currently displayed screen."""
-        self.root.ids.screen_manager.current = screen_name
-        if screen_name == "accounts":
-            if self.accounts_panel_widget:
-                self.accounts_panel_widget.populate_accounts()
+    def switch_panel(self, panel_name):
+        """
+        Switches the view in the main content panel.
+        """
+        if panel_name == 'accounts':
+            self.load_accounts()
+        self.root.ids.screen_manager.current = panel_name
 
     def go_to_login(self, *args):
-        """Switches to the login screen."""
-        self.switch_screen('login_screen')
+        """
+        Called when 'Add Account' is pressed.
+        """
+        self.root.ids.screen_manager.current = 'login'
 
-    def save_session(self, phone_number, session_string):
-        """Saves the session string to a file and switches to the accounts screen."""
-        filename = f"{phone_number.replace('+', '')}.session"
-        project_root = os.path.dirname(os.path.abspath(__file__))
-        file_path = os.path.join(project_root, filename)
+    # --- Asynchronous Operations ---
 
-        try:
-            with open(file_path, "w") as f:
-                f.write(session_string)
-            print(f"Session saved successfully to {file_path}")
-            self.switch_screen('accounts')
-        except IOError as e:
-            print(f"Error saving session file: {e}")
+    def run_async(self, coro):
+        """
+        Runs an asynchronous task in a separate thread to avoid blocking the UI.
+        """
+        threading.Thread(target=asyncio.run, args=(coro,)).start()
 
-# ==========================================================================
-# >> MAIN EXECUTION
-# ==========================================================================
+    # --- Session and Account Management ---
+
+    def save_session(self, phone, session_string):
+        """
+        Saves the new session, reloads accounts, and switches to the accounts screen.
+        """
+        print(f"Successfully signed in for {phone}. Session string saved.")
+        # The session is automatically saved by the service, so we just need to refresh.
+        self.load_accounts()
+        self.root.ids.screen_manager.current = 'accounts'
+
+    def load_accounts(self):
+        """
+        Loads saved Telegram account sessions and displays them.
+        This runs in a background thread to avoid freezing the UI.
+        """
+        self.root.ids.accounts_panel.load_accounts()
 
 if __name__ == '__main__':
     ProjectEchoApp().run()
