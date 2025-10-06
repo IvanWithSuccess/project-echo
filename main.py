@@ -6,26 +6,27 @@ from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from functools import partial
 from kivy.properties import StringProperty, ObjectProperty
-
-from kivymd.uix.boxlayout import MDBoxLayout
+# FIX: Import plain BoxLayout to avoid KivyMD ripple effect conflicts
+from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.behaviors import ButtonBehavior
 
-# Import our custom screen content
+# 1. Import all Python classes first.
 from project_echo.screens.accounts_screen import AccountsPanel
 from project_echo.screens.login_screen import LoginScreen
 from project_echo.screens.code_verification_screen import CodeVerificationScreen
-
-# Import the new services
 from project_echo.services.telegram_service import TelegramService
 from project_echo.services.country_service import CountryService
 
-# Load KV files
+# 2. Now, load the KV files.
 Builder.load_file("project_echo/screens/accounts_screen.kv")
 Builder.load_file("project_echo/screens/login_screen.kv")
 Builder.load_file("project_echo/screens/code_verification_screen.kv")
 
 
-class NavButton(ButtonBehavior, MDBoxLayout):
+# FIX: Inherit from plain BoxLayout instead of MDBoxLayout.
+# This prevents the KivyMD ripple behavior from being automatically
+# and incorrectly applied to our custom composite widget, fixing the crash.
+class NavButton(ButtonBehavior, BoxLayout):
     text = StringProperty("")
     icon = StringProperty("")
 
@@ -38,18 +39,18 @@ class ProjectEchoApp(MDApp):
 
     phone_to_verify = StringProperty()
 
-    # FIX: Add service instances to be globally accessible
     telegram_service = ObjectProperty(None)
     country_service = ObjectProperty(None)
+    accounts_panel_widget = ObjectProperty(None) # To hold the instance
 
     def build(self):
         """Initializes the application and returns the root widget."""
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Gray"
         Window.maximize()
-        # FIX: Instantiate the services on build
         self.telegram_service = TelegramService()
         self.country_service = CountryService()
+        # 3. Finally, load the main layout.
         return Builder.load_file('main.kv')
 
     def on_start(self):
@@ -63,7 +64,8 @@ class ProjectEchoApp(MDApp):
         for screen_name, screen_info in screens_data.items():
             screen = MDScreen(name=screen_name)
             if screen_name == "accounts":
-                screen.add_widget(AccountsPanel())
+                self.accounts_panel_widget = AccountsPanel()
+                screen.add_widget(self.accounts_panel_widget)
             else:
                 screen.add_widget(MDLabel(
                     text=f"{screen_info['title']} content here",
@@ -78,7 +80,6 @@ class ProjectEchoApp(MDApp):
             )
             self.root.ids.nav_list.add_widget(nav_button)
             
-        # Add functional screens
         self.root.ids.screen_manager.add_widget(LoginScreen())
         self.root.ids.screen_manager.add_widget(CodeVerificationScreen())
 
@@ -87,6 +88,9 @@ class ProjectEchoApp(MDApp):
     def switch_screen(self, screen_name, *args):
         """Callback function to switch the currently displayed screen."""
         self.root.ids.screen_manager.current = screen_name
+        if screen_name == "accounts":
+            if self.accounts_panel_widget:
+                self.accounts_panel_widget.populate_accounts()
 
 # ==========================================================================
 # >> MAIN EXECUTION

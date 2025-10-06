@@ -1,29 +1,28 @@
 <AccountsPanel>:
-    MDRelativeLayout:
+    orientation: "vertical"
+    spacing: "10dp"
+    padding: "10dp"
 
-        MDBoxLayout:
-            orientation: 'vertical'
-            padding: dp(24)
-            spacing: dp(24)
+    MDBoxLayout:
+        orientation: "horizontal"
+        adaptive_height: True
+        spacing: "10dp"
 
-            MDLabel:
-                text: "Accounts Management"
-                font_style: "H5"
-                adaptive_height: True
-                padding: [0, dp(12)]
+        MDFillRoundFlatButton:
+            text: "Add Account"
+            icon: "account-plus"
+            on_release: app.root.ids.screen_manager.current = 'login_screen'
+            pos_hint: {"center_y": 0.5}
 
-            ScrollView:
-                MDList:
-                    id: account_list
-                    padding: 0
+        MDLabel:
+            text: "Your Telegram Accounts"
+            font_style: "H6"
+            halign: "center"
+            valign: "middle"
 
-        MDFloatingActionButton:
-            id: add_button
-            icon: "plus"
-            # FIX: Set a smaller, custom size for the button
-            size_hint: (None, None)
-            size: (dp(40), dp(40))
-            on_release: root.open_menu()
-            # Adjust position to be based on the smaller size
-            x: self.parent.width - self.width - dp(16)
-            y: dp(16)
+    MDSeparator:
+
+    # FIX: Added the missing ScrollView and MDList with the correct id
+    MDScrollView:
+        MDList:
+            id: accounts_list

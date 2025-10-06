@@ -1,10 +1,12 @@
 import asyncio
 
+from kivy.lang import Builder
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
 from kivymd.uix.screen import MDScreen
 
+# FIX: Removed Builder call. All KV files will be loaded centrally in main.py
 
 class CodeVerificationScreen(MDScreen):
     """The code verification screen, refactored for asynchronous operation."""
@@ -29,7 +31,6 @@ class CodeVerificationScreen(MDScreen):
         code = self.ids.code_field.text
         password = self.ids.password_field.text
 
-        # Pass the password only if the field is enabled and has text
         password_to_send = password if not self.ids.password_field.disabled and password else None
 
         result = await self.app.telegram_service.verify_code(code, password_to_send)
@@ -38,17 +39,16 @@ class CodeVerificationScreen(MDScreen):
 
         if result.get("success"):
             self.show_dialog("Success!", "You have successfully logged in.")
-            await self.app.telegram_service.disconnect() # Cleanly disconnect
-            self.manager.current = 'accounts'
+            await self.app.telegram_service.disconnect()
+            # Switch to accounts and trigger a refresh
+            self.app.switch_screen('accounts')
         elif result.get("password_needed"):
-            # The service told us a password is required
             self.ids.password_field.disabled = False
             hint = result.get("hint", "Password required")
             self.ids.password_field.hint_text = hint
             self.ids.password_field.focus = True
             self.show_dialog("Password Needed", f"Your account is protected by a password.\nHint: {hint}")
         else:
-            # Handle other errors
             error_message = result.get("error", "An unknown error occurred.")
             self.show_dialog("Verification Failed", error_message)
 

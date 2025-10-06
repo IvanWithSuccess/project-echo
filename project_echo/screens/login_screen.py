@@ -1,6 +1,7 @@
 import asyncio
 from functools import partial
 
+from kivy.lang import Builder
 from kivy.clock import Clock
 from kivy.properties import ObjectProperty
 from kivymd.app import MDApp
@@ -12,6 +13,7 @@ from kivymd.uix.scrollview import MDScrollView
 from kivymd.uix.textfield import MDTextField
 from kivymd.uix.boxlayout import MDBoxLayout
 
+# FIX: Removed Builder call. All KV files will be loaded centrally in main.py
 
 class LoginScreen(MDScreen):
     """The login screen, completely refactored to be asynchronous and more user-friendly."""
@@ -67,7 +69,6 @@ class LoginScreen(MDScreen):
 
     def sync_country_from_phone(self, instance, phone_code):
         """Updates the country field based on the manually entered phone code."""
-        # To avoid recursive calls, we check if the UI is already in sync
         if self.app.country_service.get_code_by_country(self.ids.country_field.text) == phone_code:
             return
         
