@@ -3,7 +3,6 @@ from kivy.clock import Clock
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
-import asyncio
 
 class PasswordVerificationScreen(Screen):
     """
@@ -25,7 +24,8 @@ class PasswordVerificationScreen(Screen):
             return
 
         self.ids.spinner.active = True
-        asyncio.create_task(self.async_verify_password(password))
+        # FIX: Use the new reliable async runner
+        self.app.run_async(self.async_verify_password(password))
 
     async def async_verify_password(self, password):
         result = await self.app.telegram_service.verify_code(
@@ -40,7 +40,6 @@ class PasswordVerificationScreen(Screen):
     def process_verification_result(self, result):
         self.ids.spinner.active = False
         if result.get("success"):
-            # FIX: Call the correct save_session method on the app instance
             self.app.save_session(self.app.phone_to_verify, result["session_string"])
         else:
             error_message = result.get("error", "An unknown error occurred.")

@@ -1,5 +1,7 @@
 
-import os # FIX: Added os import for file path operations
+import os
+import asyncio
+import threading
 from kivy.lang import Builder
 from kivy.core.window import Window
 from kivymd.app import MDApp
@@ -44,6 +46,13 @@ class ProjectEchoApp(MDApp):
     country_service = ObjectProperty(None)
     accounts_panel_widget = ObjectProperty(None)
 
+    # FIX: Add asyncio loop management
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.loop = asyncio.new_event_loop()
+        self.thread = threading.Thread(target=self.loop.run_forever)
+        self.thread.daemon = True
+
     def build(self):
         """Initializes the application and returns the root widget."""
         self.theme_cls.theme_style = "Dark"
@@ -54,7 +63,9 @@ class ProjectEchoApp(MDApp):
         return Builder.load_file('main.kv')
 
     def on_start(self):
-        """Create and populate screens and navigation buttons."""
+        """Start the asyncio thread and populate screens."""
+        self.thread.start() # Start the asyncio event loop thread
+        
         screens_data = {
             "dashboard": {"icon": "view-dashboard", "title": "Dashboard"},
             "accounts": {"icon": "account-group", "title": "Accounts"},
@@ -86,6 +97,15 @@ class ProjectEchoApp(MDApp):
 
         self.root.ids.screen_manager.current = 'dashboard'
 
+    def on_stop(self):
+        """Stop the asyncio event loop."""
+        self.loop.call_soon_threadsafe(self.loop.stop)
+
+    # FIX: Add a helper to run async tasks from the Kivy thread
+    def run_async(self, coro):
+        """Helper to run a coroutine on the asyncio event loop."""
+        return asyncio.run_coroutine_threadsafe(coro, self.loop)
+
     def switch_screen(self, screen_name, *args):
         """Callback function to switch the currently displayed screen."""
         self.root.ids.screen_manager.current = screen_name
@@ -97,13 +117,9 @@ class ProjectEchoApp(MDApp):
         """Switches to the login screen."""
         self.switch_screen('login_screen')
 
-    # FIX: Added the missing save_session method
     def save_session(self, phone_number, session_string):
         """Saves the session string to a file and switches to the accounts screen."""
-        # Sanitize phone number to use as a filename
         filename = f"{phone_number.replace('+', '')}.session"
-        
-        # Get the absolute path to the project's root directory
         project_root = os.path.dirname(os.path.abspath(__file__))
         file_path = os.path.join(project_root, filename)
 
@@ -111,7 +127,6 @@ class ProjectEchoApp(MDApp):
             with open(file_path, "w") as f:
                 f.write(session_string)
             print(f"Session saved successfully to {file_path}")
-            # Switch to the accounts screen to see the new account
             self.switch_screen('accounts')
         except IOError as e:
             print(f"Error saving session file: {e}")
