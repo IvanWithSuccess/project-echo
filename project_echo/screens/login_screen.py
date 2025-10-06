@@ -1,44 +1,58 @@
-from kivymd.uix.screen import MDScreen  # FIX: Inherit from MDScreen
+
+from kivy.uix.screenmanager import Screen
 from kivy.clock import Clock
-from kivymd.app import MDApp
-from kivymd.uix.dialog import MDDialog
-from kivymd.uix.button import MDFlatButton
-from kivymd.uix.list import OneLineListItem
-from kivy.properties import ListProperty, StringProperty
+from kivy.app import App
+from kivy.uix.popup import Popup
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.recycleview import RecycleView
+from kivy.uix.button import Button
+from kivy.uix.textinput import TextInput
+from kivy.uix.label import Label
+from kivy.properties import ListProperty, StringProperty
 
 
 # =============================================================================
-# >> DIALOG-RELATED CLASSES
+# >> CUSTOM POPUP CONTENT
 # =============================================================================
 
-class CountryDialogContent(BoxLayout):
-    def __init__(self, **kwargs):
+class CountryDialogPopup(Popup):
+    """A custom popup for selecting a country with a search feature."""
+    def __init__(self, login_screen, countries, **kwargs):
         super().__init__(**kwargs)
-        self.screen = MDApp.get_running_app().root.get_screen('login_screen')
+        self.login_screen = login_screen
+        self.title = "Choose a Country"
+        self.size_hint = (0.9, 0.9)
 
-    def filter_countries(self, search_text):
-        self.screen.filter_countries(search_text)
+        # Main layout for the popup
+        layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
-class CountryListItem(OneLineListItem):
-    code = StringProperty()
+        # Search bar
+        search_bar = TextInput(hint_text="Search for a country...", size_hint_y=None, height=48)
+        search_bar.bind(text=self.filter_countries)
+        layout.add_widget(search_bar)
 
-    def select_country(self, instance):
-        self.parent.parent.parent.parent.parent.screen.select_country(instance)
+        # RecycleView for the list of countries
+        self.rv = RecycleView()
+        self.rv.viewclass = 'Button'
+        self.rv.data = []
+        layout.add_widget(self.rv)
 
+        self.content = layout
+        self.filter_countries(search_bar, "") # Initial population
+
+    def filter_countries(self, instance, search_text):
+        """Filters the list of countries based on the search text."""
+        self.login_screen.filter_countries(search_text, self.rv)
 
 # =============================================================================
 # >> LOGIN SCREEN
 # =============================================================================
 
-# FIX: Inherit from MDScreen to get theme properties
-class LoginScreen(MDScreen):
-    rv_data = ListProperty([])
-
+class LoginScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.app = MDApp.get_running_app()
-        self.dialog = None
+        self.app = App.get_running_app()
+        self.error_popup = None
         self.country_dialog = None
         self.all_countries = self.app.country_service.get_all_countries()
 
@@ -58,7 +72,7 @@ class LoginScreen(MDScreen):
         phone = self.ids.phone_field.text
 
         if not country or not phone:
-            self.show_error_dialog("Country and phone number are required.")
+            self.show_error_popup("Country and phone number are required.")
             return
 
         full_phone = phone if phone.startswith('+') else f"{self.app.country_service.get_country_code(country)}{phone}"
@@ -77,30 +91,25 @@ class LoginScreen(MDScreen):
             self.app.session_string_for_password = result["session_string"]
             self.app.switch_screen('code_verification_screen')
         else:
-            self.show_error_dialog(result.get("error", "An unknown error occurred."))
+            self.show_error_popup(result.get("error", "An unknown error occurred."))
 
     def open_country_dialog(self):
         if not self.country_dialog:
-            self.country_dialog = MDDialog(
-                title="Choose a Country",
-                type="custom",
-                content_cls=CountryDialogContent(),
-            )
-        self.filter_countries("")
+            self.country_dialog = CountryDialogPopup(self, self.all_countries)
         self.country_dialog.open()
 
-    def filter_countries(self, search_text=""):
+    def filter_countries(self, search_text, recycle_view):
         if not search_text:
             countries_to_display = self.all_countries
         else:
             countries_to_display = self.app.country_service.search_countries(search_text)
         
-        self.country_dialog.content_cls.ids.rv.data = [
+        recycle_view.data = [
             {
-                'viewclass': 'CountryListItem',
                 'text': f"{name} ({code})",
-                'code': code,
-                'on_release': lambda x=code, y=name: self.select_country(y, x)
+                'on_release': lambda name=name, code=code: self.select_country(name, code),
+                'size_hint_y': None,
+                'height': 48
             }
             for name, code in countries_to_display
         ]
@@ -111,12 +120,15 @@ class LoginScreen(MDScreen):
         if self.country_dialog:
             self.country_dialog.dismiss()
 
-    def show_error_dialog(self, text):
-        if not self.dialog:
-            self.dialog = MDDialog(
-                title="Login Error",
-                text=text,
-                buttons=[MDFlatButton(text="OK", on_release=lambda x: self.dialog.dismiss())]
-            )
-        self.dialog.text = text
-        self.dialog.open()
+    def show_error_popup(self, text):
+        if self.error_popup:
+            self.error_popup.dismiss()
+
+        content = BoxLayout(orientation='vertical', spacing=10, padding=10)
+        content.add_widget(Label(text=text))
+        ok_button = Button(text="OK", size_hint_y=None, height=44)
+        content.add_widget(ok_button)
+
+        self.error_popup = Popup(title="Login Error", content=content, size_hint=(0.8, 0.4))
+        ok_button.bind(on_release=self.error_popup.dismiss)
+        self.error_popup.open()

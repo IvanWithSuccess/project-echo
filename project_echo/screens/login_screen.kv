@@ -1,76 +1,57 @@
 <LoginScreen>:
 
-    MDBoxLayout:
+    BoxLayout:
         orientation: 'vertical'
         padding: [dp(20), dp(50), dp(20), dp(50)]
         spacing: dp(30)
 
-        MDLabel:
+        Label:
             text: "Sign in to Project Echo"
             halign: 'center'
-            # FIX: Changed font_style to a valid value for KivyMD 1.2.0
-            font_style: 'H5'
-            adaptive_height: True
+            font_size: '24sp'
+            bold: True
+            size_hint_y: None
+            height: self.texture_size[1]
 
-        MDBoxLayout:
+        BoxLayout:
             orientation: 'vertical'
             spacing: dp(20)
-            adaptive_height: True
+            size_hint_y: None
+            height: self.minimum_height
 
-            MDTextField:
+            TextInput:
                 id: country_field
                 hint_text: "Country"
                 readonly: True
+                multiline: False
                 on_focus: if self.focus: root.open_country_dialog()
+                size_hint_y: None
+                height: dp(48)
 
-            MDTextField:
+            TextInput:
                 id: phone_field
                 hint_text: "Phone Number"
                 helper_text: "Include your country code (e.g., +1)"
-                helper_text_mode: "on_focus"
+                multiline: False
+                size_hint_y: None
+                height: dp(48)
 
-        MDBoxLayout:
+        BoxLayout:
             orientation: 'vertical'
-            adaptive_height: True
+            size_hint_y: None
+            height: self.minimum_height
             spacing: dp(10)
 
-            MDRaisedButton:
+            Button:
                 text: "NEXT"
                 on_release: root.on_next_button_press()
-                md_bg_color: app.theme_cls.primary_color
+                size_hint_y: None
+                height: dp(48)
                 pos_hint: {'center_x': 0.5}
 
-            MDSpinner:
+            Spinner:
                 id: spinner
                 size_hint: None, None
                 size: dp(46), dp(46)
                 pos_hint: {'center_x': 0.5}
                 active: False
-
-# ==============================================================================
-# >> COUNTRY DIALOG WITH SEARCH AND RECYCLEVIEW
-# ==============================================================================
-<CountryListItem>:
-    on_release: root.select_country(self)
-
-<CountryDialogContent@MDBoxLayout>:
-    orientation: "vertical"
-    spacing: dp(10)
-    padding: dp(10)
-
-    MDTextField:
-        id: search_field
-        hint_text: "Search for a country..."
-        on_text: root.filter_countries(self.text)
-
-    RecycleView:
-        id: rv
-        key_viewclass: 'viewclass'
-        key_size: 'height'
-
-        RecycleBoxLayout:
-            default_size: None, dp(56)
-            default_size_hint: 1, None
-            size_hint_y: None
-            height: self.minimum_height
-            orientation: 'vertical'
