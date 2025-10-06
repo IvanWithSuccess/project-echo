@@ -4,7 +4,8 @@ class CountryService:
     """
 
     def __init__(self):
-        # A comprehensive list of countries and their codes
+        # FIX: Corrected SyntaxError by wrapping multiple codes in lists.
+        # The methods below have been updated to handle this structure.
         self._countries = {
             'Afghanistan': '+93',
             'Albania': '+355',
@@ -65,7 +66,7 @@ class CountryService:
             'Denmark': '+45',
             'Djibouti': '+253',
             'Dominica': '+1-767',
-            'Dominican Republic': '+1-809', '+1-829', '+1-849',
+            'Dominican Republic': ['+1-809', '+1-829', '+1-849'],
             'Ecuador': '+593',
             'Egypt': '+20',
             'El Salvador': '+503',
@@ -177,7 +178,7 @@ class CountryService:
             'Pitcairn': '+64',
             'Poland': '+48',
             'Portugal': '+351',
-            'Puerto Rico': '+1-787', '+1-939',
+            'Puerto Rico': ['+1-787', '+1-939'],
             'Qatar': '+974',
             'Reunion': '+262',
             'Romania': '+40',
@@ -258,14 +259,18 @@ class CountryService:
         return [name for name in self._countries if name.lower().startswith(search_text)]
 
     def get_country_by_code(self, code: str):
-        """Finds the country name for a given phone code."""
-        # This is a simple lookup, but can be improved for complex cases
+        """Finds the country name for a given phone code, handling lists of codes."""
         for name, c in self._countries.items():
-            if c == code:
+            if isinstance(c, list):
+                if code in c:
+                    return name
+            elif c == code:
                 return name
         return None
 
     def get_code_by_country(self, country_name: str):
-        """Gets the phone code for a given country name."""
-        return self._countries.get(country_name)
-
+        """Gets the primary phone code for a given country name."""
+        code_or_codes = self._countries.get(country_name)
+        if isinstance(code_or_codes, list):
+            return code_or_codes[0]  # Return the primary code
+        return code_or_codes
