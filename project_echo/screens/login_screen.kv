@@ -4,8 +4,8 @@
     MDFloatLayout:
         MDBoxLayout:
             orientation: 'vertical'
-            adaptive_size: True
-            width: 500dp  # FIX: Removed quotes for correct dp interpretation
+            size_hint_x: None  # FIX: Use size_hint_x to allow for a fixed width
+            width: "500dp"      # FIX: Put value in quotes as expected by KV lang
             pos_hint: {'center_x': 0.5, 'center_y': 0.5}
             spacing: "20dp"
 
