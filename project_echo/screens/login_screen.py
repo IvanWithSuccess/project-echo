@@ -3,6 +3,12 @@ from kivy.clock import Clock
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
+from kivymd.uix.list import OneLineAvatarIconListItem
+from kivy.properties import StringProperty
+
+# FIX: Create a custom list item to handle selection
+class CountryListItem(OneLineAvatarIconListItem):
+    code = StringProperty()
 
 class LoginScreen(Screen):
     """Login screen for entering phone number."""
@@ -11,11 +17,20 @@ class LoginScreen(Screen):
         super().__init__(**kwargs)
         self.app = MDApp.get_running_app()
         self.dialog = None
+        self.country_dialog = None # FIX: Add a dialog for countries
 
     def on_enter(self, *args):
         self.ids.spinner.active = False
         self.ids.country_field.text = ""
         self.ids.phone_field.text = ""
+        # FIX: Bind text input changes to the auto-detection function
+        self.ids.phone_field.bind(text=self.on_phone_text_change)
+
+    def on_phone_text_change(self, instance, value):
+        """Automatically update the country field based on the phone code."""
+        country_name = self.app.country_service.get_country_by_code(value)
+        if country_name:
+            self.ids.country_field.text = country_name
 
     def on_next_button_press(self):
         country = self.ids.country_field.text
@@ -25,11 +40,11 @@ class LoginScreen(Screen):
             self.show_error_dialog("Country and phone number are required.")
             return
         
-        full_phone = f"{self.app.country_service.get_country_code(country)}{phone}"
+        # The phone field may already contain the country code
+        full_phone = phone if phone.startswith('+') else f"{self.app.country_service.get_country_code(country)}{phone}"
         self.app.phone_to_verify = full_phone
         self.ids.spinner.active = True
         
-        # FIX: Use the new reliable async runner
         self.app.run_async(self.async_send_code(full_phone))
 
     async def async_send_code(self, phone):
@@ -38,7 +53,6 @@ class LoginScreen(Screen):
         Clock.schedule_once(lambda dt: self.process_send_code_result(result))
 
     def process_send_code_result(self, result):
-        """Processes the result of the send code request."""
         self.ids.spinner.active = False
         if result.get("success"):
             self.app.phone_code_hash = result["phone_code_hash"]
@@ -47,12 +61,29 @@ class LoginScreen(Screen):
         else:
             self.show_error_dialog(result.get("error", "An unknown error occurred."))
 
+    # FIX: Full implementation of the country selection dialog
     def open_country_dialog(self):
-        # Implementation for country dialog remains the same
-        pass
+        if not self.country_dialog:
+            items = []
+            for country_name, code in self.app.country_service.get_all_countries():
+                item = CountryListItem(text=country_name, code=code)
+                item.bind(on_release=self.select_country)
+                items.append(item)
+            
+            self.country_dialog = MDDialog(
+                title="Choose a Country",
+                type="simple",
+                items=items,
+            )
+        self.country_dialog.open()
+
+    def select_country(self, instance):
+        """Handle the selection of a country from the dialog."""
+        self.ids.country_field.text = instance.text
+        self.ids.phone_field.text = instance.code
+        self.country_dialog.dismiss()
 
     def show_error_dialog(self, text):
-        """Displays an error dialog."""
         if not self.dialog:
             self.dialog = MDDialog(
                 title="Login Error",
