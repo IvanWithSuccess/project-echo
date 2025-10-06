@@ -8,7 +8,7 @@ from kivy.uix.button import Button
 
 class CodeVerificationScreen(Screen):
     """
-    The screen where the user enters the code sent to their Telegram.
+    Screen for entering the code received via Telegram.
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -16,25 +16,25 @@ class CodeVerificationScreen(Screen):
         self.error_popup = None
 
     def on_enter(self, *args):
-        self.ids.info_label.text = f"Enter the code sent to {self.app.phone_to_verify}"
-        self.ids.spinner.active = False
+        # Clear previous state
+        self.ids.spinner_label.text = ""
         self.ids.code_field.text = ""
+        # Update info label with the correct phone number
+        self.ids.info_label.text = f"Enter the code sent to {self.app.phone_to_verify}"
 
     def verify_code(self):
         code = self.ids.code_field.text
         if not code:
-            self.show_error_popup("Please enter the confirmation code.")
+            self.show_error_popup("Please enter the code.")
             return
 
-        self.ids.spinner.active = True
+        self.ids.spinner_label.text = "Verifying..."
         self.app.run_async(self.async_verify_code(code))
 
     async def async_verify_code(self, code):
-        """
-        Asynchronously calls the Telegram service to verify the code.
-        """
+        """Asynchronously calls the Telegram service to verify the code."""
         result = await self.app.telegram_service.verify_code(
-            session_string=self.app.session_string_for_password,
+            session_string=None,  # Not needed for the first step
             phone=self.app.phone_to_verify,
             code=code,
             phone_code_hash=self.app.phone_code_hash
@@ -42,29 +42,29 @@ class CodeVerificationScreen(Screen):
         Clock.schedule_once(lambda dt: self.process_verification_result(result))
 
     def process_verification_result(self, result):
-        """
-        Processes the result from the Telegram service.
-        """
-        self.ids.spinner.active = False
+        """Handles the result from the verification attempt."""
+        self.ids.spinner_label.text = ""
+
         if result.get("success"):
+            # On success, the session string is returned
             self.app.save_session(self.app.phone_to_verify, result["session_string"])
-        elif result.get("password_needed"):
+
+        elif result.get("password_required"):
+            # If 2FA is enabled, we need to ask for the password
             self.app.session_string_for_password = result["session_string"]
-            password_screen = self.manager.get_screen('password_verification_screen')
-            password_screen.ids.info_label.text = f"Hint: {result.get('hint', 'No hint available')}"
-            self.app.switch_screen('password_verification_screen')
+            self.app.root.ids.screen_manager.current = 'password_verification_screen'
         else:
-            self.show_error_popup(result.get("error", "An unknown error occurred."))
+            # On failure, show an error
+            error_message = result.get("error", "An unknown error occurred.")
+            self.show_error_popup(error_message)
 
     def show_error_popup(self, text):
-        """
-        Displays an error popup with the given text.
-        """
+        """Displays an error message in a popup."""
         if self.error_popup:
             self.error_popup.dismiss()
-
+        
         content = BoxLayout(orientation='vertical', spacing=10, padding=10)
-        content.add_widget(Label(text=text, halign='center'))
+        content.add_widget(Label(text=text, halign='center', color=(0,0,0,1)))
         ok_button = Button(text="OK", size_hint_y=None, height=44)
         content.add_widget(ok_button)
 
