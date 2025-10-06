@@ -1,158 +1,92 @@
-
-import logging
-import os
 import asyncio
-from telethon import TelegramClient, functions, types
-from telethon.tl.functions.account import UpdateProfileRequest
-from telethon.tl.functions.photos import UploadProfilePhotoRequest
-from telethon.errors import SessionPasswordNeededError
+from telethon.sync import TelegramClient
+from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
 
-SESSIONS_DIR = "sessions"
-UPLOADS_DIR = "uploads"
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# It's better to have API credentials in one place and import them
+from ..screens.login_screen import API_ID, API_HASH
 
 class TelegramService:
-    def __init__(self, phone: str, api_id: int, api_hash: str, system_version: str = None, proxy: dict = None, loop=None):
-        if not os.path.exists(SESSIONS_DIR): os.makedirs(SESSIONS_DIR)
-        if not os.path.exists(UPLOADS_DIR): os.makedirs(UPLOADS_DIR)
-        
-        self.phone = phone
-        self.api_id = api_id
-        self.api_hash = api_hash
-        self.session_name = phone.replace('+', '')
-        self.proxy = proxy
-        session_path = os.path.join(SESSIONS_DIR, self.session_name)
-        
-        proxy_formatted = None
-        if proxy and proxy.get('host') and proxy.get('port'):
-            proxy_formatted = (proxy['type'], proxy['host'], proxy['port'], True, proxy.get('user'), proxy.get('pass'))
+    """
+    An asynchronous service to handle all interactions with the Telegram API.
+    This ensures the UI never freezes during network requests.
+    """
 
-        self.client = TelegramClient(session_path, self.api_id, self.api_hash,
-                                   system_version=system_version or '4.16.30-vxCUSTOM',
-                                   proxy=proxy_formatted,
-                                   loop=loop) # Pass the loop to the client
+    def __init__(self):
+        self.client = None
+        self._sent_code = None
 
-    async def check_proxy(self) -> bool:
+    async def send_code(self, phone_number: str) -> dict:
         """
-        Attempts to connect to Telegram using the configured proxy to check if it's working.
+        Connects to Telegram and sends a verification code.
+        
+        Args:
+            phone_number: The user's phone number.
+
+        Returns:
+            A dictionary with 'success': True or 'success': False and 'error': message.
         """
-        logging.info(f"[{self.session_name}] Attempting connection via proxy...")
         try:
-            await asyncio.wait_for(self.client.connect(), timeout=10)
-            logging.info(f"[{self.session_name}] Proxy connection successful.")
-            return True
+            # Create a new client for each login attempt to ensure clean sessions
+            self.client = TelegramClient(phone_number, API_ID, API_HASH)
+            await self.client.connect()
+
+            if await self.client.is_user_authorized():
+                return {"success": False, "error": "User is already authorized."}
+
+            self._sent_code = await self.client.send_code_request(phone_number)
+            return {"success": True}
+
         except Exception as e:
-            logging.error(f"[{self.session_name}] Proxy connection failed: {e}")
-            return False
-        finally:
-            if self.client.is_connected():
-                await self.client.disconnect()
+            print(f"[TelegramService] Error sending code: {e}")
+            return {"success": False, "error": str(e)}
 
-    async def start_login(self) -> (str, str | None):
-        logging.info(f"[{self.session_name}] Connecting for login...")
-        await self.client.connect()
-        status, phone_code_hash = None, None
-        if await self.client.is_user_authorized():
-            logging.info(f"[{self.session_name}] Already authorized.")
-            status = 'ALREADY_AUTHORIZED'
-        else:
-            logging.info(f"[{self.session_name}] Sending code request...")
-            try:
-                result = await self.client.send_code_request(self.phone)
-                phone_code_hash = result.phone_code_hash
-                status = 'CODE_SENT'
-            except Exception as e:
-                logging.error(f"[{self.session_name}] Failed to send code: {e}")
-                status = str(e)
-                phone_code_hash = None
-        await self.client.disconnect()
-        return status, phone_code_hash
+    async def verify_code(self, code: str, password: str = None) -> dict:
+        """
+        Verifies the code and logs the user in, handling 2FA.
 
-    async def submit_code(self, code: str, phone_code_hash: str) -> str:
-        logging.info(f"[{self.session_name}] Connecting to submit code...")
-        await self.client.connect()
-        status = ''
+        Args:
+            code: The verification code received by the user.
+            password: The 2FA password (if any).
+
+        Returns:
+            A dictionary indicating success, failure, or if a password is needed.
+        """
+        if not self.client or not self.client.is_connected():
+            return {"success": False, "error": "Client not connected. Please try again."}
+
         try:
-            await self.client.sign_in(self.phone, code, phone_code_hash=phone_code_hash)
-            status = 'SUCCESS'
+            await self.client.sign_in(code=code, phone_hash=self._sent_code.phone_code_hash)
+            # If sign_in is successful without error, the user is in.
+            return {"success": True}
+
+        except PhoneCodeInvalidError:
+            return {"success": False, "error": "Invalid verification code."}
+
         except SessionPasswordNeededError:
-            status = 'PASSWORD_NEEDED'
-        except Exception as e:
-            status = str(e)
-        if status != 'PASSWORD_NEEDED': await self.client.disconnect()
-        return status
-
-    async def submit_password(self, password: str) -> str:
-        if not self.client.is_connected(): await self.client.connect()
-        status = ''
-        try:
-            await self.client.sign_in(password=password)
-            status = 'SUCCESS'
-        except Exception as e:
-            status = str(e)
-        await self.client.disconnect()
-        return status
-
-    async def get_me(self):
-        await self.client.connect()
-        user = None
-        if await self.client.is_user_authorized():
-             user = await self.client.get_me()
-        await self.client.disconnect()
-        return user
-
-    async def get_chat_participants(self, chat_link: str) -> (str, list):
-        logging.info(f"[{self.session_name}] Connecting to scrape: {chat_link}")
-        await self.client.connect()
-        users, status = [], ""
-        try:
-            if not await self.client.is_user_authorized(): raise Exception("Client not authorized.")
-            entity = await self.client.get_entity(chat_link)
-            async for user in self.client.iter_participants(entity, limit=None):
-                if not user.bot and not user.deleted:
-                    users.append({"id": user.id, "username": user.username, "first_name": user.first_name, "last_name": user.last_name})
-            status = "SUCCESS"
-        except Exception as e:
-            status = str(e)
-        finally:
-            await self.client.disconnect()
-        return status, users
-    
-    async def send_message(self, user_id: int, message: str) -> str:
-        logging.info(f"[{self.session_name}] Connecting to send message to {user_id}...")
-        await self.client.connect()
-        status = ""
-        try:
-            if not await self.client.is_user_authorized(): raise Exception("Client not authorized.")
-            await self.client.send_message(user_id, message)
-            status = "SUCCESS"
-        except Exception as e:
-            status = str(e)
-        finally:
-            await self.client.disconnect()
-        return status
-
-    async def update_profile(self, first_name: str, last_name: str, bio: str, avatar_path: str) -> str:
-        logging.info(f"[{self.session_name}] Connecting to update profile...")
-        await self.client.connect()
-        status_log = []
-        try:
-            if not await self.client.is_user_authorized(): raise Exception("Client not authorized.")
+            # The user has 2FA enabled. If a password was not provided, ask for it.
+            if not password:
+                # Get the password hint
+                hint = await self.client.get_password_hint()
+                return {"success": False, "password_needed": True, "hint": hint}
             
-            await self.client(UpdateProfileRequest(first_name=first_name or '', last_name=last_name or '', about=bio or ''))
-            status_log.append("Name/Bio updated.")
-
-            if avatar_path and os.path.exists(avatar_path):
-                avatar_file = await self.client.upload_file(avatar_path)
-                await self.client(UploadProfilePhotoRequest(file=avatar_file))
-                status_log.append("Avatar updated.")
-            elif avatar_path:
-                status_log.append(f"Avatar path '{avatar_path}' not found, skipping.")
-            
-            return f"Profile update successful: {' '.join(status_log)}"
+            # If a password was provided, try to sign in with it.
+            try:
+                await self.client.sign_in(password=password)
+                return {"success": True}
+            except Exception as e:
+                # This could be a "Password incorrect" error, which we can get from the exception string.
+                return {"success": False, "error": str(e)}
 
         except Exception as e:
-            return str(e)
+            print(f"[TelegramService] Error verifying code: {e}")
+            return {"success": False, "error": str(e)}
+
         finally:
+            # We should only disconnect if the process is fully complete or has failed terminally.
+            # For 2FA, we need to stay connected.
+            pass
+
+    async def disconnect(self):
+        """Disconnects the client if it's connected."""
+        if self.client and self.client.is_connected():
             await self.client.disconnect()

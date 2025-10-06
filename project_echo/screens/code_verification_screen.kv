@@ -1,9 +1,8 @@
 <CodeVerificationScreen>:
     name: "code_verification_screen"
 
-    MDRelativeLayout:
+    MDFloatLayout:
 
-        # Back button
         MDIconButton:
             icon: "arrow-left"
             pos_hint: {"top": 0.98, "x": 0.02}
@@ -11,20 +10,19 @@
 
         MDBoxLayout:
             orientation: 'vertical'
-            size_hint_x: None
-            width: dp(400)
-            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-            spacing: dp(20)
+            adaptive_size: True
+            width: "300dp"
+            pos_hint: {'center_x': 0.5, 'center_y': 0.6}
+            spacing: "20dp"
 
             MDLabel:
                 text: "Enter Code"
                 halign: 'center'
                 font_style: 'H5'
                 adaptive_height: True
-                padding_y: dp(15)
 
             MDLabel:
-                text: "We have sent you a message\nwith the confirmation code."
+                text: "We have sent you the code.\nPlease enter it below."
                 halign: 'center'
                 adaptive_height: True
                 theme_text_color: "Secondary"
@@ -32,30 +30,25 @@
             MDTextField:
                 id: code_field
                 hint_text: "Confirmation Code"
-                mode: "fill"
                 halign: "center"
-                line_color_focus: (36/255, 161/255, 222/255, 1)
 
+            # FIX: Password field is now disabled by default
             MDTextField:
                 id: password_field
                 hint_text: "2FA Password (if any)"
                 password: True
-                mode: "fill"
                 halign: "center"
-                line_color_focus: (36/255, 161/255, 222/255, 1)
+                disabled: True  # Will be enabled if needed
 
-            MDRaisedButton:
+            MDFillRoundFlatButton:
                 text: "CONFIRM"
-                md_bg_color: (36/255, 161/255, 222/255, 1)
                 pos_hint: {'center_x': 0.5}
-                size_hint_x: 1
-                padding_y: dp(15)
+                padding: "12dp"
                 on_release: root.verify_code()
 
-        # FIX: Add a spinner for loading indication
         MDSpinner:
             id: spinner
             size_hint: None, None
             size: dp(46), dp(46)
             pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-            active: False # Initially hidden
+            active: False

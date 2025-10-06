@@ -1,80 +1,64 @@
-import threading
-from kivy.clock import Clock
-from kivymd.uix.screen import MDScreen
+import asyncio
+
 from kivymd.app import MDApp
 from kivymd.uix.dialog import MDDialog
 from kivymd.uix.button import MDFlatButton
-from telethon.sync import TelegramClient
-from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
-
-# Import the API credentials
-from .login_screen import API_ID, API_HASH
+from kivymd.uix.screen import MDScreen
 
 
 class CodeVerificationScreen(MDScreen):
-    """Screen for entering the verification code and 2FA password."""
+    """The code verification screen, refactored for asynchronous operation."""
 
-    def on_enter(self, *args):
-        self.ids.code_field.focus = True
-        # Clear fields when entering the screen
+    def on_pre_enter(self, *args):
+        """Clear fields and set focus when the screen is shown."""
+        self.app = MDApp.get_running_app()
         self.ids.code_field.text = ""
         self.ids.password_field.text = ""
+        self.ids.password_field.hint_text = "2FA Password (if any)"
+        self.ids.password_field.disabled = True
         self.ids.spinner.active = False
+        self.ids.code_field.focus = True
 
     def verify_code(self):
-        """Shows spinner and starts the verification worker thread."""
+        """Starts the asynchronous code verification process."""
+        asyncio.create_task(self.verify_code_async())
+
+    async def verify_code_async(self):
+        """The async part of the verification. Calls the telegram service."""
         self.ids.spinner.active = True
         code = self.ids.code_field.text
         password = self.ids.password_field.text
-        phone_number = MDApp.get_running_app().phone_to_verify
 
-        if not phone_number:
-            self.show_dialog("Error", "Phone number not found. Please go back and try again.")
-            self.ids.spinner.active = False
-            return
+        # Pass the password only if the field is enabled and has text
+        password_to_send = password if not self.ids.password_field.disabled and password else None
 
-        threading.Thread(
-            target=self._verify_worker,
-            args=(phone_number, code, password),
-            daemon=True
-        ).start()
+        result = await self.app.telegram_service.verify_code(code, password_to_send)
 
-    def _verify_worker(self, phone, code, password):
-        """Runs in a thread to verify the login details."""
-        client = TelegramClient(phone, API_ID, API_HASH)
+        self.ids.spinner.active = False
 
-        try:
-            client.connect()
-            client.sign_in(phone=phone, code=code, password=password if password else None)
-            Clock.schedule_once(self._go_to_accounts_screen)
-
-        except PhoneCodeInvalidError:
-            Clock.schedule_once(lambda dt: self.show_dialog("Invalid Code", "The confirmation code is incorrect."))
-        except SessionPasswordNeededError:
-            Clock.schedule_once(lambda dt: self.show_dialog("Password Needed", "Your account is protected with a 2FA password. Please enter it."))
-        except Exception as e:
-            Clock.schedule_once(lambda dt: self.show_dialog("Verification Error", str(e)))
-        finally:
-            if client.is_connected():
-                client.disconnect()
-            Clock.schedule_once(lambda dt: setattr(self.ids.spinner, 'active', False))
-
-    def _go_to_accounts_screen(self, dt):
-        """Switches back to the accounts screen on the main thread."""
-        MDApp.get_running_app().root.ids.screen_manager.current = 'accounts'
+        if result.get("success"):
+            self.show_dialog("Success!", "You have successfully logged in.")
+            await self.app.telegram_service.disconnect() # Cleanly disconnect
+            self.manager.current = 'accounts'
+        elif result.get("password_needed"):
+            # The service told us a password is required
+            self.ids.password_field.disabled = False
+            hint = result.get("hint", "Password required")
+            self.ids.password_field.hint_text = hint
+            self.ids.password_field.focus = True
+            self.show_dialog("Password Needed", f"Your account is protected by a password.\nHint: {hint}")
+        else:
+            # Handle other errors
+            error_message = result.get("error", "An unknown error occurred.")
+            self.show_dialog("Verification Failed", error_message)
 
     def show_dialog(self, title, text):
-        """Utility function to display a dialog window."""
+        """Helper to show a simple dialog."""
         if not hasattr(self, 'dialog') or not self.dialog:
             self.dialog = MDDialog(
                 title=title,
                 text=text,
-                buttons=[
-                    MDFlatButton(
-                        text="OK",
-                        on_release=lambda *args: self.dialog.dismiss()
-                    ),
-                ],
+                buttons=[MDFlatButton(text="OK", on_release=lambda *args: self.dialog.dismiss())],
             )
         else:
             self.dialog.title = title

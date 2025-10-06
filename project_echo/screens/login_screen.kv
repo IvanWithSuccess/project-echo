@@ -1,9 +1,8 @@
 <LoginScreen>:
     name: "login_screen"
 
-    MDRelativeLayout:
+    MDFloatLayout:
 
-        # Back button
         MDIconButton:
             icon: "arrow-left"
             pos_hint: {"top": 0.98, "x": 0.02}
@@ -11,51 +10,39 @@
 
         MDBoxLayout:
             orientation: 'vertical'
-            size_hint_x: None
-            width: dp(400)
-            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-            spacing: dp(20)
+            adaptive_size: True
+            width: "300dp"
+            pos_hint: {'center_x': 0.5, 'center_y': 0.6}
+            spacing: "20dp"
 
             MDLabel:
                 text: "Sign in to Telegram"
                 halign: 'center'
                 font_style: 'H5'
                 adaptive_height: True
-                padding_y: dp(15)
 
             MDLabel:
-                text: "Please confirm your country and\nenter your phone number."
+                text: "Choose your country and enter your phone number."
                 halign: 'center'
                 adaptive_height: True
                 theme_text_color: "Secondary"
 
-            # FIX: Change MDTextField to a clickable item to open the menu
-            MDBoxLayout:
-                orientation: "vertical"
-                adaptive_height: True
-
-                MDTextField:
-                    id: country_field
-                    hint_text: "Country"
-                    text: "Ukraine"
-                    readonly: True
-                    mode: "fill"
-                    line_color_focus: (36/255, 161/255, 222/255, 1)
-                    on_focus: if self.focus: root.open_country_menu()
+            # FIX: This field now opens a searchable dialog
+            MDTextField:
+                id: country_field
+                hint_text: "Country"
+                text: "Ukraine"
+                on_focus: if self.focus: root.open_country_dialog()
 
             MDTextField:
                 id: phone_field
                 hint_text: "Phone Number"
                 text: "+380"
-                mode: "fill"
-                line_color_focus: (36/255, 161/255, 222/255, 1)
 
-            MDRaisedButton:
+            MDFillRoundFlatButton:
                 text: "NEXT"
-                md_bg_color: (36/255, 161/255, 222/255, 1)
                 pos_hint: {'center_x': 0.5}
-                size_hint_x: 1
-                padding_y: dp(15)
+                padding: "12dp"
                 on_release: root.on_next_button_press()
 
         MDSpinner:

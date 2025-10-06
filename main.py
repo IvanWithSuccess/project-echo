@@ -5,7 +5,7 @@ from kivymd.app import MDApp
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.label import MDLabel
 from functools import partial
-from kivy.properties import StringProperty
+from kivy.properties import StringProperty, ObjectProperty
 
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.behaviors import ButtonBehavior
@@ -13,13 +13,15 @@ from kivy.uix.behaviors import ButtonBehavior
 # Import our custom screen content
 from project_echo.screens.accounts_screen import AccountsPanel
 from project_echo.screens.login_screen import LoginScreen
-# FIX: Import the new CodeVerificationScreen
 from project_echo.screens.code_verification_screen import CodeVerificationScreen
+
+# Import the new services
+from project_echo.services.telegram_service import TelegramService
+from project_echo.services.country_service import CountryService
 
 # Load KV files
 Builder.load_file("project_echo/screens/accounts_screen.kv")
 Builder.load_file("project_echo/screens/login_screen.kv")
-# FIX: Load the new code_verification_screen.kv file
 Builder.load_file("project_echo/screens/code_verification_screen.kv")
 
 
@@ -34,14 +36,20 @@ class NavButton(ButtonBehavior, MDBoxLayout):
 class ProjectEchoApp(MDApp):
     """The main application class with a custom side navigation."""
 
-    # FIX: Add a property to store the phone number during the login process
     phone_to_verify = StringProperty()
+
+    # FIX: Add service instances to be globally accessible
+    telegram_service = ObjectProperty(None)
+    country_service = ObjectProperty(None)
 
     def build(self):
         """Initializes the application and returns the root widget."""
         self.theme_cls.theme_style = "Dark"
         self.theme_cls.primary_palette = "Gray"
         Window.maximize()
+        # FIX: Instantiate the services on build
+        self.telegram_service = TelegramService()
+        self.country_service = CountryService()
         return Builder.load_file('main.kv')
 
     def on_start(self):
@@ -72,7 +80,6 @@ class ProjectEchoApp(MDApp):
             
         # Add functional screens
         self.root.ids.screen_manager.add_widget(LoginScreen())
-        # FIX: Add the CodeVerificationScreen to the ScreenManager
         self.root.ids.screen_manager.add_widget(CodeVerificationScreen())
 
         self.root.ids.screen_manager.current = 'dashboard'
