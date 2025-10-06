@@ -2,14 +2,6 @@
 #:import Window kivy.core.window.Window
 #:import NoTransition kivy.uix.screenmanager.NoTransition
 
-# Set a default white background for the entire window
-canvas.before:
-    Color:
-        rgba: (1, 1, 1, 1)
-    Rectangle:
-        pos: self.pos
-        size: self.size
-
 # Style for navigation buttons
 <NavButton@Button>:
     size_hint_y: None
@@ -28,8 +20,15 @@ canvas.before:
 
 # The main container for the content area (right side)
 <ContentPanel>:
-    # The background is now inherited from the window
+    # This panel will now have a transparent background to show the window's background
+    canvas.before:
+        Color:
+            rgba: (1, 1, 1, 1) # Explicitly white
+        Rectangle:
+            pos: self.pos
+            size: self.size
 
+# --- The ONE Root Widget ---
 BoxLayout:
     orientation: 'horizontal'
 
