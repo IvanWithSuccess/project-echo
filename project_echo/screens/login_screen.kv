@@ -1,7 +1,7 @@
 <LoginScreen>:
     name: "login_screen"
 
-    MDFloatLayout:
+    MDRelativeLayout:
 
         # Back button
         MDIconButton:
@@ -11,13 +11,11 @@
 
         MDBoxLayout:
             orientation: 'vertical'
-            # FIX: Made the layout wider and centered it
             size_hint_x: None
             width: dp(400)
             pos_hint: {'center_x': 0.5, 'center_y': 0.5}
             spacing: dp(20)
 
-            # 1. Title (Logo removed)
             MDLabel:
                 text: "Sign in to Telegram"
                 halign: 'center'
@@ -25,22 +23,26 @@
                 adaptive_height: True
                 padding_y: dp(15)
 
-            # 2. Subtitle
             MDLabel:
                 text: "Please confirm your country and\nenter your phone number."
                 halign: 'center'
                 adaptive_height: True
                 theme_text_color: "Secondary"
 
-            # 3. Country Input
-            MDTextField:
-                id: country_field
-                hint_text: "Country"
-                text: "Ukraine"
-                mode: "fill"
-                line_color_focus: (36/255, 161/255, 222/255, 1)
+            # FIX: Change MDTextField to a clickable item to open the menu
+            MDBoxLayout:
+                orientation: "vertical"
+                adaptive_height: True
 
-            # 4. Phone Number Input
+                MDTextField:
+                    id: country_field
+                    hint_text: "Country"
+                    text: "Ukraine"
+                    readonly: True
+                    mode: "fill"
+                    line_color_focus: (36/255, 161/255, 222/255, 1)
+                    on_focus: if self.focus: root.open_country_menu()
+
             MDTextField:
                 id: phone_field
                 hint_text: "Phone Number"
@@ -48,7 +50,6 @@
                 mode: "fill"
                 line_color_focus: (36/255, 161/255, 222/255, 1)
 
-            # 5. NEXT Button
             MDRaisedButton:
                 text: "NEXT"
                 md_bg_color: (36/255, 161/255, 222/255, 1)
@@ -57,5 +58,9 @@
                 padding_y: dp(15)
                 on_release: root.on_next_button_press()
 
-            # 6. QR Code button removed
-
+        MDSpinner:
+            id: spinner
+            size_hint: None, None
+            size: dp(46), dp(46)
+            pos_hint: {'center_x': 0.5, 'center_y': 0.5}
+            active: False

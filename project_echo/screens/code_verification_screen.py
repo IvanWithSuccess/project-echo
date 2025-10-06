@@ -2,35 +2,37 @@ import threading
 from kivy.clock import Clock
 from kivymd.uix.screen import MDScreen
 from kivymd.app import MDApp
+from kivymd.uix.dialog import MDDialog
+from kivymd.uix.button import MDFlatButton
 from telethon.sync import TelegramClient
-from telethon.errors import SessionPasswordNeededError
+from telethon.errors import SessionPasswordNeededError, PhoneCodeInvalidError
 
-# Import the API credentials from the login screen to ensure consistency
+# Import the API credentials
 from .login_screen import API_ID, API_HASH
 
 
 class CodeVerificationScreen(MDScreen):
-    """Screen for entering the Telegram verification code and 2FA password."""
+    """Screen for entering the verification code and 2FA password."""
 
     def on_enter(self, *args):
-        """Called when the screen is displayed."""
-        # Automatically focus the code field when the screen opens
         self.ids.code_field.focus = True
+        # Clear fields when entering the screen
+        self.ids.code_field.text = ""
+        self.ids.password_field.text = ""
+        self.ids.spinner.active = False
 
     def verify_code(self):
-        """Handles the logic when the 'CONFIRM' button is pressed."""
+        """Shows spinner and starts the verification worker thread."""
+        self.ids.spinner.active = True
         code = self.ids.code_field.text
         password = self.ids.password_field.text
-
-        # Retrieve the phone number that started the login process
         phone_number = MDApp.get_running_app().phone_to_verify
 
         if not phone_number:
-            print("[Verify Worker] Error: No phone number found. Returning to login screen.")
-            MDApp.get_running_app().root.ids.screen_manager.current = 'login_screen'
+            self.show_dialog("Error", "Phone number not found. Please go back and try again.")
+            self.ids.spinner.active = False
             return
 
-        # Run network operations in a separate thread
         threading.Thread(
             target=self._verify_worker,
             args=(phone_number, code, password),
@@ -38,31 +40,43 @@ class CodeVerificationScreen(MDScreen):
         ).start()
 
     def _verify_worker(self, phone, code, password):
-        """This function runs in a separate thread to verify the login details."""
-        print(f"[Verify Worker] Connecting for {phone} to verify code.")
+        """Runs in a thread to verify the login details."""
         client = TelegramClient(phone, API_ID, API_HASH)
 
         try:
             client.connect()
-            print("[Verify Worker] Signing in...")
-            
             client.sign_in(phone=phone, code=code, password=password if password else None)
-            
-            print("[Verify Worker] Sign in successful!")
             Clock.schedule_once(self._go_to_accounts_screen)
 
+        except PhoneCodeInvalidError:
+            Clock.schedule_once(lambda dt: self.show_dialog("Invalid Code", "The confirmation code is incorrect."))
         except SessionPasswordNeededError:
-            print("[Verify Worker] 2FA password is needed.")
-            # TODO: Inform the user on the main thread that a password is required
+            Clock.schedule_once(lambda dt: self.show_dialog("Password Needed", "Your account is protected with a 2FA password. Please enter it."))
         except Exception as e:
-            print(f"[Verify Worker] An error occurred: {e}")
-            # TODO: Show a user-friendly error on the main thread
+            Clock.schedule_once(lambda dt: self.show_dialog("Verification Error", str(e)))
         finally:
             if client.is_connected():
                 client.disconnect()
-                print("[Verify Worker] Disconnected.")
-    
+            Clock.schedule_once(lambda dt: setattr(self.ids.spinner, 'active', False))
+
     def _go_to_accounts_screen(self, dt):
-        """Switches back to the accounts screen (on the main thread)."""
-        print("[Main Thread] Login successful, switching to accounts screen.")
+        """Switches back to the accounts screen on the main thread."""
         MDApp.get_running_app().root.ids.screen_manager.current = 'accounts'
+
+    def show_dialog(self, title, text):
+        """Utility function to display a dialog window."""
+        if not hasattr(self, 'dialog') or not self.dialog:
+            self.dialog = MDDialog(
+                title=title,
+                text=text,
+                buttons=[
+                    MDFlatButton(
+                        text="OK",
+                        on_release=lambda *args: self.dialog.dismiss()
+                    ),
+                ],
+            )
+        else:
+            self.dialog.title = title
+            self.dialog.text = text
+        self.dialog.open()
