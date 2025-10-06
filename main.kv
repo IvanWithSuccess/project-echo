@@ -5,7 +5,8 @@
 # CORRECTED: Mix ButtonBehavior directly into the FloatLayout
 <NavButton@ButtonBehavior+FloatLayout>:
     size_hint_y: None
-    height: '50dp'
+    # Increased button height to better accommodate the larger icon
+    height: '60dp'
     source: ''
     panel_name: ''
     # The on_release event now belongs to the NavButton itself
@@ -15,7 +16,8 @@
     Image:
         source: root.source
         size_hint: None, None
-        size: (dp(28), dp(28))
+        # CHANGED: Increased icon size by 1.5x (28 * 1.5 = 42)
+        size: (dp(42), dp(42))
         pos_hint: {'center_x': 0.5, 'center_y': 0.5}
 
 # --- The ONE Root Widget ---
