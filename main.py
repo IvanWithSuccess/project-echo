@@ -15,11 +15,11 @@ from project_echo.screens.accounts_screen import AccountsPanel
 from project_echo.screens.login_screen import LoginScreen
 from project_echo.screens.code_verification_screen import CodeVerificationScreen
 from project_echo.screens.password_verification_screen import PasswordVerificationScreen
+# Import the new campaigns screen that will be created
+from project_echo.screens.campaigns_screen import CampaignsScreen
 from project_echo.services.telegram_service import TelegramService
 from project_echo.services.country_service import CountryService
 
-# Note: The custom ContentPanel widget has been removed as it was causing issues.
-# A standard BoxLayout is now used directly in main.kv.
 
 class ProjectEchoApp(App):
     """
@@ -40,41 +40,39 @@ class ProjectEchoApp(App):
     def build(self):
         """
         Initializes the application and returns the root widget.
-        Loads the main KV file which defines the UI structure.
         """
         Window.size = (1200, 800)
-        # Load KV files for each screen. This is a good practice to keep the UI
-        # definitions modular.
+        # Load KV files for each screen
         Builder.load_file('project_echo/screens/accounts_screen.kv')
         Builder.load_file('project_echo/screens/login_screen.kv')
         Builder.load_file('project_echo/screens/code_verification_screen.kv')
         Builder.load_file('project_echo/screens/password_verification_screen.kv')
+        Builder.load_file('project_echo/screens/campaigns_screen.kv') # Load the new KV file
         
-        # The root widget is defined in main.kv
         return Builder.load_file('main.kv')
 
     def on_start(self):
         """
         Called after the build() method is finished.
         """
-        # Start on the accounts screen
         self.switch_panel('accounts')
 
     # --- Navigation and Screen Management ---
 
     def switch_panel(self, panel_name):
-        """
-        Switches the view in the main content panel.
-        """
+        """Switches the view in the main content panel."""
         if panel_name == 'accounts':
             self.load_accounts()
         self.root.ids.screen_manager.current = panel_name
 
     def go_to_login(self, *args):
-        """
-        Called when 'Add Account' is pressed.
-        """
+        """Called when 'Add Account' is pressed."""
         self.root.ids.screen_manager.current = 'login'
+
+    # --- Country Service Helper ---
+    def get_country_code(self, country_name: str):
+        """Gets the phone code for a given country name from the service."""
+        return self.country_service.get_country_code(country_name)
 
     # --- Asynchronous Operations ---
 
@@ -91,14 +89,12 @@ class ProjectEchoApp(App):
         Saves the new session, reloads accounts, and switches to the accounts screen.
         """
         print(f"Successfully signed in for {phone}. Session string saved.")
-        # The session is automatically saved by the service, so we just need to refresh.
         self.load_accounts()
         self.root.ids.screen_manager.current = 'accounts'
 
     def load_accounts(self):
         """
         Loads saved Telegram account sessions and displays them.
-        This runs in a background thread to avoid freezing the UI.
         """
         self.root.ids.accounts_panel.load_accounts()
 

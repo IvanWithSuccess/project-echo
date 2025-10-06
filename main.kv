@@ -13,7 +13,6 @@
     valign: 'middle'
     padding_x: '20dp'
     text_size: self.width - dp(40), self.height
-    # Change background on press
     background_normal: ''
     background_down: 'atlas://data/images/defaulttheme/button_pressed'
 
@@ -101,3 +100,8 @@ BoxLayout:
                 name: 'password_verification'
                 PasswordVerificationScreen:
                     id: password_verification_screen
+
+            # --- Add the new Campaigns Screen ---
+            CampaignsScreen:
+                name: 'campaigns'
+                id: campaigns_screen
