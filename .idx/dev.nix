@@ -1,56 +1,47 @@
-# To learn more about how to use Nix to configure your environment
-# see: https://developers.google.com/idx/guides/customize-idx-env
-{ pkgs, ... }: {
-  # Which nixpkgs channel to use.
-  channel = "stable-25.05"; # or "unstable"
-  # Use https://search.nixos.org/packages to find packages
-  packages = [
-    # pkgs.go
-    pkgs.python314
-    pkgs.uv
-    # pkgs.python311Packages.pip
-    # pkgs.nodejs_20
-    # pkgs.nodePackages.nodemon
+'
+{ pkgs ? import <nixpkgs> { } }:
+
+pkgs.mkShell {
+  buildInputs = with pkgs; [
+    # Kivy and KivyMD dependencies
+    python310
+    python310Packages.pip
+    kivy
+    gst_all_1.gstreamer
+    gst_all_1.gst-plugins-base
+    gst_all_1.gst-plugins-good
+    gst_all_1.gst-plugins-bad
+    gst_all_1.gst-plugins-ugly
+    gst_all_1.gst-libav
+    sdl2
+    sdl2_image
+    sdl2_mixer
+    sdl2_ttf
+    # Python libraries from requirements.txt
+    (python310.withPackages (ps: (with ps; [
+      pip
+      wheel
+    ]) ++ (with builtins; filter (p: p != null) (map (p: (
+      let
+        l = builtins.split "
+" (builtins.readFile ./requirements.txt);
+        p_ = builtins.elemAt (builtins.split "==" p) 0;
+      in
+      if p_ == "kivymd" then null else python310.pkgs.buildPythonPackage {
+        name = p_;
+        src = fetchPypi {
+          pname = p_;
+          version = builtins.elemAt (builtins.split "==" p) 1;
+          sha256 = "0000000000000000000000000000000000000000000000000000"; # Placeholder, will be filled by Nix
+        };
+        doCheck = false;
+        propagatedBuildInputs = with ps; [ ];
+      }
+    )) l))))
   ];
-  # Sets environment variables in the workspace
-  env = {};
-  idx = {
-    # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
-    extensions = [
-      # "vscodevim.vim"
-      "google.gemini-cli-vscode-ide-companion"
-      "ms-python.python"
-    ];
-    # Enable previews
-    previews = {
-      enable = true;
-      previews = {
-        # web = {
-        #   # Example: run "npm run dev" with PORT set to IDX's defined port for previews,
-        #   # and show it in IDX's web preview panel
-        #   command = ["npm" "run" "dev"];
-        #   manager = "web";
-        #   env = {
-        #     # Environment variables to set for your server
-        #     PORT = "$PORT";
-        #   };
-        # };
-      };
-    };
-    # Workspace lifecycle hooks
-    workspace = {
-      # Runs when a workspace is first created
-      onCreate = {
-        # Example: install JS dependencies from NPM
-        # npm-install = "npm install";
-        # Open editors for the following files by default, if they exist:
-        default.openFiles = [ "README.md" ];
-      };
-      # Runs when the workspace is (re)started
-      onStart = {
-        # Example: start a background task to watch and re-build backend code
-        # watch-backend = "npm run watch-backend";
-      };
-    };
-  };
+
+  shellHook = ''
+    export KIVY_GL_BACKEND=sdl2
+    export KIVY_GRAPHICS_BACKEND=sdl2
+  '';
 }
