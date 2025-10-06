@@ -41,7 +41,8 @@ class ProjectEchoApp(App):
         """
         Initializes the application and returns the root widget.
         """
-        Window.size = (1200, 800)
+        # CHANGED: Reduced window size for a more compact UI
+        Window.size = (1000, 600)
         # Load KV files for each screen
         Builder.load_file('project_echo/screens/accounts_screen.kv')
         Builder.load_file('project_echo/screens/login_screen.kv')

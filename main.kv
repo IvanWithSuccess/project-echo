@@ -5,14 +5,15 @@
 # Style for navigation buttons
 <NavButton@Button>:
     size_hint_y: None
-    height: '48dp'
+    height: '60dp'
     background_color: (0.95, 0.95, 0.95, 1) # Light gray background
     color: (0, 0, 0, 1) # Black text
-    font_size: '16sp'
-    halign: 'left'
+    font_size: '20sp'
+    # Center the icon/text
+    halign: 'center'
     valign: 'middle'
-    padding_x: '20dp'
-    text_size: self.width - dp(40), self.height
+    padding_x: 0
+    text_size: self.width, self.height
     # Change background on press
     background_normal: ''
     background_down: 'atlas://data/images/defaulttheme/button_pressed'
@@ -26,7 +27,7 @@ BoxLayout:
         id: nav_panel
         orientation: 'vertical'
         size_hint_x: None
-        width: '250dp'
+        width: '80dp' # Reduced width for icon-based navigation
         padding: '10dp'
         spacing: '10dp'
         canvas.before:
@@ -37,8 +38,8 @@ BoxLayout:
                 size: self.size
 
         Label:
-            text: 'Echo'
-            font_size: '24sp'
+            text: 'E'
+            font_size: '30sp'
             bold: True
             size_hint_y: None
             height: '48dp'
@@ -46,18 +47,18 @@ BoxLayout:
 
         NavButton:
             id: dashboard_button
-            text: 'Dashboard'
+            text: 'D' # Placeholder for Dashboard Icon
             on_release: app.switch_panel('dashboard')
 
         NavButton:
             id: accounts_button
-            text: 'Accounts'
+            text: 'A' # Placeholder for Accounts Icon
             on_release: app.switch_panel('accounts')
 
         NavButton:
             id: campaigns_button
-            text: 'Campaigns'
-            on_release: app.switch_panel('campaigns') # This will now work
+            text: 'C' # Placeholder for Campaigns Icon
+            on_release: app.switch_panel('campaigns')
 
         Widget: # Spacer
             size_hint_y: 1.0
