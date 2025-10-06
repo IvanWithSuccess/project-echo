@@ -12,13 +12,15 @@ from kivy.uix.behaviors import ButtonBehavior
 
 # Import our custom screen content
 from project_echo.screens.accounts_screen import AccountsPanel
-# FIX: Import the new LoginScreen
 from project_echo.screens.login_screen import LoginScreen
+# FIX: Import the new CodeVerificationScreen
+from project_echo.screens.code_verification_screen import CodeVerificationScreen
 
 # Load KV files
 Builder.load_file("project_echo/screens/accounts_screen.kv")
-# FIX: Load the new login_screen.kv file
 Builder.load_file("project_echo/screens/login_screen.kv")
+# FIX: Load the new code_verification_screen.kv file
+Builder.load_file("project_echo/screens/code_verification_screen.kv")
 
 
 class NavButton(ButtonBehavior, MDBoxLayout):
@@ -31,6 +33,9 @@ class NavButton(ButtonBehavior, MDBoxLayout):
 
 class ProjectEchoApp(MDApp):
     """The main application class with a custom side navigation."""
+
+    # FIX: Add a property to store the phone number during the login process
+    phone_to_verify = StringProperty()
 
     def build(self):
         """Initializes the application and returns the root widget."""
@@ -47,7 +52,6 @@ class ProjectEchoApp(MDApp):
             "campaigns": {"icon": "bullhorn", "title": "Campaigns"},
         }
 
-        # Add main navigation screens
         for screen_name, screen_info in screens_data.items():
             screen = MDScreen(name=screen_name)
             if screen_name == "accounts":
@@ -66,10 +70,11 @@ class ProjectEchoApp(MDApp):
             )
             self.root.ids.nav_list.add_widget(nav_button)
             
-        # FIX: Add the LoginScreen to the ScreenManager
+        # Add functional screens
         self.root.ids.screen_manager.add_widget(LoginScreen())
+        # FIX: Add the CodeVerificationScreen to the ScreenManager
+        self.root.ids.screen_manager.add_widget(CodeVerificationScreen())
 
-        # Set the default screen
         self.root.ids.screen_manager.current = 'dashboard'
 
     def switch_screen(self, screen_name, *args):

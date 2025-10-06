@@ -3,6 +3,7 @@ from kivy.clock import Clock
 from kivymd.uix.screen import MDScreen
 from kivymd.app import MDApp
 from telethon.sync import TelegramClient
+from telethon.errors import SessionPasswordNeededError
 
 # =============================================================================
 # IMPORTANT: REPLACE WITH YOUR REAL API CREDENTIALS
@@ -57,9 +58,9 @@ class LoginScreen(MDScreen):
     
     def _go_to_code_verification_screen(self, dt):
         """Switches to the code verification screen (on the main thread)."""
-        print("[Main Thread] Switching to code verification screen (not implemented yet).")
-        # This is the next step in our development
-        # MDApp.get_running_app().root.ids.screen_manager.current = 'code_verification_screen'
+        # FIX: Activate the screen transition
+        print("[Main Thread] Switching to code verification screen.")
+        MDApp.get_running_app().root.ids.screen_manager.current = 'code_verification_screen'
 
     def _go_to_accounts_screen(self, dt):
         """Switches back to the accounts screen (on the main thread)."""
